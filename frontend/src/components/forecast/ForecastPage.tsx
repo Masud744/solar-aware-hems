@@ -334,20 +334,21 @@ export function ForecastPage({
                 />
               )}
 
-              {/* Time axis labels */}
+              {/* Time axis labels (evenly spaced every 3 hours across the 24h horizon) */}
               {chartData.rows.map((row, idx) => {
-                if (idx % 3 !== 0 && idx !== chartData.rows.length - 1) return null;
+                if (idx % 3 !== 0) return null;
                 const x = chartData.getX(idx);
+                const anchor = idx === 0 ? 'start' : 'middle';
                 return (
                   <text
                     key={row.isoTime}
                     x={x}
                     y={chartData.height - 12}
                     fill="var(--text-3)"
-                    fontSize="10.5"
+                    fontSize="10"
                     fontFamily="monospace"
                     fontWeight="500"
-                    textAnchor="middle"
+                    textAnchor={anchor}
                   >
                     {row.timeLabel}
                   </text>
