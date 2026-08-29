@@ -258,6 +258,68 @@ Consolidated Today + Current Month persistent energy accounting and savings base
 
 Persist user-entered daily solar generation estimate into Supabase `user_solar_estimates`.
 
+---
+
+## Conversational AI Assistant (SolarMate AI)
+
+### `POST /chat`
+
+Natural language query interface backed by cloud LLM inference (Groq API). Queries system state using controlled backend tools with per-user data isolation.
+
+**Request:**
+```json
+{
+  "message": "What is my current power consumption and is solar available?",
+  "session_id": "optional-uuid-session-identifier",
+  "history": [
+    { "role": "user", "content": "Hello SolarMate" },
+    { "role": "assistant", "content": "Hello! How can I assist with your energy management?" }
+  ]
+}
+```
+
+**Response:**
+```json
+{
+  "session_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "answer": "Your current power consumption is 45.5 W (0.046 kW) with voltage at 183.6 V [MEASURED]. Solar generation is currently 0.0 kW as it is nighttime.",
+  "data_sources": [
+    "[MEASURED]"
+  ],
+  "tool_calls": [
+    "get_live_telemetry",
+    "get_solar_forecast"
+  ],
+  "error": null
+}
+```
+
+### `GET /chat/history`
+
+Retrieve historical conversation turns for a given session ID.
+
+**Query Parameters:**
+* `session_id` (`string`, required): The session UUID to load.
+* `limit` (`integer`, optional, default: 50, max: 100): Maximum number of message records to return.
+
+### Existing Implemented Tools & Safety Architecture
+
+The assistant executes multi-turn function calling strictly across these **9 controlled backend tools**:
+
+1. `get_live_telemetry`: Queries latest verified ESP32 electrical (voltage, current, power) and ambient (DHT22) readings.
+2. `get_relay_status`: Reads current 4-channel circuit routing states (`grid`, `solar`, `off`).
+3. `get_solar_forecast`: Fetches ML predicted and safe solar generation for a target hour.
+4. `get_load_forecast`: Fetches ML predicted and conservative load for a target hour.
+5. `get_24h_horizon_summary`: Retrieves the 24-hour safe solar surplus profile and optimal scheduling window.
+6. `check_appliance_safety`: Executes deterministic $k \times \sigma$ decision evaluation for a specified appliance power and duration.
+7. `get_schedule_recommendation`: Identifies the optimal future time window to run an appliance on solar surplus.
+8. `get_energy_summary`: Retrieves today and monthly energy totals, solar utilization, and monetary tariff savings.
+9. `update_user_solar_estimate`: Updates user-reported daily solar estimate in PostgreSQL (requires explicit confirmation flow).
+
+#### Strict Cyber-Physical Safety Invariant
+* **No Direct Hardware Control:** The architecture does not expose relay actuation endpoints to the LLM tool schema.
+* **Deterministic Decision Authority:** Appliance safety recommendations (`ALLOW`/`DENY`) are computed deterministically by `decision_engine.py`; the LLM formats and explains these outputs but cannot alter mathematical risk thresholds or directly switch physical electrical circuits.
+
 **Request:**
 ```json
 {

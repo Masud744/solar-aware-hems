@@ -68,7 +68,7 @@
 - **Dual-Core FreeRTOS Embedded Controller:** ESP32 firmware running 1 kHz true-RMS AC voltage/current sampling on Core 1 while managing Wi-Fi, HTTP telemetry streaming, and polling on Core 0.
 - **Hardware Break-Before-Make Interlocks:** Enforces a 300 ms dead-time between Grid and Solar relay transitions to prevent catastrophic phase short-circuits.
 - **SmartProv Captive-Portal Wi-Fi Provisioning:** Onboards new Wi-Fi credentials via SoftAP captive portal and encrypted NVS storage without hardcoded credentials.
-- **Conversational AI Assistant (SolarMate AI):** Natural language conversational assistant powered by Groq LLM with function-calling capabilities over real-time system state.
+- **Conversational AI & Explanation Layer (SolarMate AI):** Natural language conversational assistant powered by Groq LLM with function-calling capabilities over live telemetry, ML forecasts, and energy accounting. **Safety Architecture:** The assistant operates strictly as an advisory and explanation interface; the system architecture prevents LLM-generated responses or tool calls from directly controlling hardware or overriding the deterministic $k \times \sigma$ safety engine.
 - **Enterprise Access Control:** Supabase PostgreSQL persistence with Role-Based Access Control (RBAC) and an Admin Approval Matrix.
 
 ---
@@ -131,7 +131,12 @@ graph TD
     I -->|GPIO Control with 300ms Dead-Time| K[Dual-Bank Relay Switch Matrix]
 ```
 
----
+### 2.1 Advisory Conversational Layer & Deterministic Safety Boundary
+
+The architecture enforces a strict decoupling between natural language interaction and physical system actuation:
+
+- **Deterministic Safety-Critical Core:** Appliance dispatch feasibility (`ALLOW` / `DENY`), conservative risk margins ($k \times \sigma$), TreeSHAP explanations, and hardware break-before-make relay dead-times ($300\text{ ms}$) are computed deterministically. They execute independently of the conversational LLM.
+- **Advisory SolarMate AI Layer:** The conversational assistant uses structured, read-only tool definitions (`get_live_telemetry`, `get_solar_forecast`, `check_appliance_safety`, etc.) to query system state and explain recommendations. The backend architecture prevents LLM responses or tool calls from directly actuating physical relays or overriding safety decisions. Physical source switching remains strictly under human operator control or verified deterministic firmware routines.
 
 ## 3. How the System Works (Operational Pipeline)
 
