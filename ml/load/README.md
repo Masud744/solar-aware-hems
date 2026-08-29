@@ -1,7 +1,6 @@
 # Load Forecasting — ML Pipeline
 
 > **Project:** Risk-Aware and Explainable AI for Solar-Integrated Residential Energy Management Under Forecast Uncertainty: An IoT-Enabled Framework (Solar-Aware HEMS)  
-> **Status:** Phase 2 Complete — Verification Gate PASSED (with documented iterations)
 
 ## Overview
 
