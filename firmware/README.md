@@ -3,7 +3,6 @@
 > **Project:** Risk-Aware and Explainable AI for Solar-Integrated Residential Energy Management Under Forecast Uncertainty: An IoT-Enabled Framework (Solar-Aware HEMS)  
 > **Hardware Verification Status:** 
 > - **VERIFIED ON PHYSICAL HARDWARE:** FreeRTOS dual-core task separation, SmartProv v2.1.3 captive-portal Wi-Fi provisioning (zero plaintext credentials, NVS storage, automatic STA reconnect, transient heap recovery), local source-selector debouncing and immediate switching (both online and offline), all 8 relay channels (Grid L1–L4 on GPIO 16/17/18/19, Solar L1–L3 on GPIO 21/22/23, Solar L4 on GPIO 13), 300 ms break-before-make dead-time interlock, DHT22 live temperature/humidity telemetry on GPIO 4, and rate-limited Wi-Fi state synchronization.
-> - **PENDING HARDWARE CALIBRATION:** ACS712 current sensor variant & zero-offset calibration, ZMPT101B AC voltage transformer calibration, and full live-load AC power metering tests under 230V mains.
 
 ---
 
