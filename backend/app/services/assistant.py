@@ -207,12 +207,18 @@ async def process_chat_message(
     executed_tools: List[str] = []
     collected_provenance: set[str] = set()
 
+    candidate_models = [settings.GROQ_MODEL, "qwen/qwen3.8-27b", "groq/compound", "openai/gpt-oss-120b"]
+    seen_models = set()
+    models_to_try = [m for m in candidate_models if m and not (m in seen_models or seen_models.add(m))]
+
     for iteration in range(max_tool_iterations):
         response = None
-        for retry in range(3):
+        last_model_err = None
+
+        for model_name in models_to_try:
             try:
                 response = client.chat.completions.create(
-                    model=settings.GROQ_MODEL,
+                    model=model_name,
                     messages=messages,
                     tools=HEMS_TOOLS_SCHEMA,
                     tool_choice="auto",
@@ -221,10 +227,11 @@ async def process_chat_message(
                 )
                 break
             except Exception as e:
+                last_model_err = e
                 err_str = str(e).lower()
-                if "rate limit" in err_str or "429" in err_str:
-                    import asyncio
-                    await asyncio.sleep(2.5 * (retry + 1))
+                if "rate limit" in err_str or "429" in err_str or "model_not_found" in err_str or "does not exist" in err_str or "not have access" in err_str:
+                    logger.warning(f"Groq model {model_name} failed ({e}), trying next candidate model...")
+                    continue
                 else:
                     logger.error(f"Groq API completion error: {e}")
                     if "401" in err_str or "invalid_api_key" in err_str or "invalid api key" in err_str:
@@ -239,6 +246,7 @@ async def process_chat_message(
                         "tool_calls": executed_tools,
                         "error": str(e),
                     }
+
         if response is None:
             rate_reply = "The AI Assistant is currently receiving high traffic. Please try again in a few seconds."
             save_message_to_db(active_session_id, "assistant", rate_reply, user_id=user_id, data_sources=list(collected_provenance), tool_calls=executed_tools)
@@ -247,7 +255,7 @@ async def process_chat_message(
                 "answer": rate_reply,
                 "data_sources": list(collected_provenance),
                 "tool_calls": executed_tools,
-                "error": "rate_limit_exceeded",
+                "error": f"all_candidate_models_failed: {last_model_err}",
             }
 
         choice = response.choices[0]
