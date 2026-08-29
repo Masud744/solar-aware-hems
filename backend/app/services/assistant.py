@@ -207,7 +207,7 @@ async def process_chat_message(
     executed_tools: List[str] = []
     collected_provenance: set[str] = set()
 
-    candidate_models = [settings.GROQ_MODEL, "qwen/qwen3.8-27b", "groq/compound", "openai/gpt-oss-120b"]
+    candidate_models = [settings.GROQ_MODEL, "openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"]
     seen_models = set()
     models_to_try = [m for m in candidate_models if m and not (m in seen_models or seen_models.add(m))]
 

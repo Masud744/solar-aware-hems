@@ -63,7 +63,7 @@ class Settings:
             os.path.join(project_root, "ml", "load", "models", "rf_corrected.joblib"),
         )
         self.GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
-        self.GROQ_MODEL = os.environ.get("GROQ_MODEL", "qwen/qwen3.8-27b")
+        self.GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
 
 
 settings = Settings()
