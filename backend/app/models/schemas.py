@@ -23,7 +23,7 @@ class SolarPredictionResponse(BaseModel):
     temperature: float
     relative_humidity: float
     wind_speed: float
-    model_version: str = "rf_corrected"
+    model_version: str
     weather_source: str = "Open-Meteo forecast API"
 
 
@@ -44,7 +44,7 @@ class LoadPredictionResponse(BaseModel):
     sigma_bucket: str
     k: float
     t2m_value: float
-    model_version: str = "rf_corrected"
+    model_version: str
     history_mode: str = "benchmark_profile_fallback"
     feature_provenance: Optional[dict] = None
     t2m_disclosure: dict

@@ -9,6 +9,7 @@
 #      rolling_std_24h, rolling_mean_168h, hour, day_of_week, month,
 #      is_weekend, T2M]
 
+import os
 import joblib
 import numpy as np
 import pandas as pd
@@ -167,3 +168,13 @@ def get_load_base_value() -> float:
     if isinstance(val, (list, tuple, np.ndarray)):
         return float(val[0])
     return float(val)
+
+
+def get_solar_model_version() -> str:
+    """Return the filename/version identifier of the active solar model."""
+    return os.path.basename(settings.SOLAR_MODEL_PATH).replace(".joblib", "")
+
+
+def get_load_model_version() -> str:
+    """Return the filename/version identifier of the active load model."""
+    return os.path.basename(settings.LOAD_MODEL_PATH).replace(".joblib", "")

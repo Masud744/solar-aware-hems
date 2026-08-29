@@ -37,6 +37,8 @@ async def _handle_solar_prediction(target_time: datetime) -> SolarPredictionResp
     sigma_kw, sigma_bucket = decision_engine.solar_sigma_bucket(wx["cloud_cover"])
     safe_kw = max(0.0, predicted_kw - settings.SAFETY_K * sigma_kw)
 
+    solar_version = ml_models.get_solar_model_version()
+
     # Save to Supabase
     sb = get_supabase()
     sb.table("solar_predictions").insert({
@@ -44,7 +46,7 @@ async def _handle_solar_prediction(target_time: datetime) -> SolarPredictionResp
         "predicted_kw": round(predicted_kw, 6),
         "safe_kw": round(safe_kw, 6),
         "sigma": round(sigma_kw, 6),
-        "model_version": "rf_corrected",
+        "model_version": solar_version,
     }).execute()
 
     return SolarPredictionResponse(
@@ -58,6 +60,7 @@ async def _handle_solar_prediction(target_time: datetime) -> SolarPredictionResp
         temperature=wx["temperature"],
         relative_humidity=wx["relative_humidity"],
         wind_speed=wx["wind_speed"],
+        model_version=solar_version,
     )
 
 
@@ -84,6 +87,7 @@ async def _handle_load_prediction(target_time: datetime, temperature_c: Optional
     predicted_kw = ml_models.predict_load(load_features)
     sigma_kw, sigma_bucket = decision_engine.load_sigma_bucket(target_hour.hour)
     conservative_kw = predicted_kw + settings.SAFETY_K * sigma_kw
+    load_version = ml_models.get_load_model_version()
 
     # Save to Supabase
     sb = get_supabase()
@@ -92,7 +96,7 @@ async def _handle_load_prediction(target_time: datetime, temperature_c: Optional
         "predicted_kw": round(predicted_kw, 6),
         "conservative_kw": round(conservative_kw, 6),
         "sigma": round(sigma_kw, 6),
-        "model_version": "rf_corrected",
+        "model_version": load_version,
     }).execute()
 
     return LoadPredictionResponse(
@@ -103,6 +107,7 @@ async def _handle_load_prediction(target_time: datetime, temperature_c: Optional
         sigma_bucket=sigma_bucket,
         k=settings.SAFETY_K,
         t2m_value=t2m,
+        model_version=load_version,
         history_mode=provenance["mode"],
         feature_provenance=provenance,
         t2m_disclosure=weather.get_t2m_disclosure(),
