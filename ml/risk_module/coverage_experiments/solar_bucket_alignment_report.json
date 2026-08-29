@@ -1,0 +1,9 @@
+{
+  "source_predictions": "/home/shahriar-alom-masud/Capstone/capstone/ml/solar/data/solar_test_predictions.csv",
+  "source_cloud_cover": "/home/shahriar-alom-masud/Capstone/capstone/ml/solar/data/solar_processed.csv",
+  "join_method": "Exact timestamp merge on \"time\" column",
+  "total_prediction_rows": 11612,
+  "matched_rows": 11612,
+  "unmatched_rows": 0,
+  "match_rate_%": 100.0
+}

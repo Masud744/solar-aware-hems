@@ -1,0 +1,44 @@
+[
+  {
+    "model": "RF Leaky Baseline",
+    "MAE_kW": 0.015906,
+    "RMSE_kW": 0.023158,
+    "R2": 0.999335,
+    "MAPE_%": 2.2923
+  },
+  {
+    "model": "Random Forest",
+    "MAE_kW": 0.33206,
+    "RMSE_kW": 0.483827,
+    "R2": 0.592867,
+    "MAPE_%": 42.5911
+  },
+  {
+    "model": "XGBoost",
+    "MAE_kW": 0.342436,
+    "RMSE_kW": 0.491907,
+    "R2": 0.579157,
+    "MAPE_%": 44.0381
+  },
+  {
+    "model": "SVR",
+    "MAE_kW": 0.345344,
+    "RMSE_kW": 0.511676,
+    "R2": 0.54465,
+    "MAPE_%": 39.8429
+  },
+  {
+    "model": "Decision Tree",
+    "MAE_kW": 0.371136,
+    "RMSE_kW": 0.544852,
+    "R2": 0.483688,
+    "MAPE_%": 45.5246
+  },
+  {
+    "model": "Linear Regression",
+    "MAE_kW": 0.368213,
+    "RMSE_kW": 0.519126,
+    "R2": 0.531294,
+    "MAPE_%": 47.9987
+  }
+]

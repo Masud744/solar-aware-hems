@@ -1,0 +1,51 @@
+[
+  {
+    "model": "RF Leaky Baseline",
+    "MAE_kW": 6.8e-05,
+    "RMSE_kW": 0.000126,
+    "R2": 1.0,
+    "MAPE_%": 0.0324
+  },
+  {
+    "model": "Random Forest",
+    "MAE_kW": 0.064134,
+    "RMSE_kW": 0.124356,
+    "R2": 0.954743,
+    "MAPE_%": 49.4219
+  },
+  {
+    "model": "XGBoost",
+    "MAE_kW": 0.069685,
+    "RMSE_kW": 0.126488,
+    "R2": 0.953178,
+    "MAPE_%": 53.6697
+  },
+  {
+    "model": "SVR",
+    "MAE_kW": 0.092235,
+    "RMSE_kW": 0.151626,
+    "R2": 0.932718,
+    "MAPE_%": 93.7111
+  },
+  {
+    "model": "Decision Tree",
+    "MAE_kW": 0.068377,
+    "RMSE_kW": 0.132579,
+    "R2": 0.94856,
+    "MAPE_%": 51.5102
+  },
+  {
+    "model": "Linear Regression",
+    "MAE_kW": 0.300105,
+    "RMSE_kW": 0.383743,
+    "R2": 0.569044,
+    "MAPE_%": 308.4594
+  },
+  {
+    "model": "Physical Formula",
+    "MAE_kW": 0.0,
+    "RMSE_kW": 0.0,
+    "R2": 1.0,
+    "MAPE_%": 0.0
+  }
+]

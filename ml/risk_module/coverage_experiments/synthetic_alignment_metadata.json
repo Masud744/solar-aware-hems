@@ -1,0 +1,11 @@
+{
+  "method": "hour-of-day + month alignment",
+  "description": "Synthetic pairing of solar and load test-set predictions. For each unique (hour, month) key present in both datasets, one solar row and one load row are randomly sampled (seed=42). The resulting pairs are a SYNTHETIC DECISION REFERENCE, not real-world co-located measurements.",
+  "common_keys": 176,
+  "max_possible_keys": 288,
+  "aligned_samples": 176,
+  "duplicate_handling": "Random sample of 1 per (hour, month) key; no duplicates.",
+  "solar_source": "Open-Meteo reanalysis, Kaliakair Bangladesh (~2020-2026)",
+  "load_source": "UCI Household Electric Power Consumption, Sceaux France (2006-2010)",
+  "device_power_kW_for_decision_matrix": 0.5
+}

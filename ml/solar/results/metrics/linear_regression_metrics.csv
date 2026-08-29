@@ -1,0 +1,2 @@
+model,MAE_kW,RMSE_kW,R2,MAPE_%
+Linear Regression,0.300105,0.383743,0.569044,308.4594

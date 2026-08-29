@@ -1,0 +1,84 @@
+{
+  "selected_k": 1.0,
+  "description": "The conservative operating point selected from the tested k values based on the empirical safety-utilization trade-off.",
+  "wording_constraints": [
+    "k=1.0 is NOT described as mathematically optimal, statistically optimal, globally optimal, or as having a textbook confidence interpretation.",
+    "It is the conservative operating point selected from the tested k values based on the empirical safety-utilization trade-off."
+  ],
+  "evidence_summary": {
+    "per_model_coverage_bucketed": {
+      "k=0.5": "Solar 89.1%, Load 79.0% — aggressive, lowest coverage",
+      "k=1.0": "Solar 93.9%, Load 88.4% — largest marginal gain from k=0.5 (+4.8pp solar, +9.3pp load)",
+      "k=1.5": "Solar 96.0%, Load 93.2% — diminishing returns begin",
+      "k=2.0": "Solar 97.4%, Load 96.2% — high coverage, low utilization (70.1%)",
+      "k=2.5": "Solar 98.3%, Load 98.0% — near-ceiling, utilization only 64.8%"
+    },
+    "synthetic_decision_matrix_note": "Evaluated on 176 synthetically aligned pairs (NOT real-world co-located). At k>=1.0, zero ALLOWs produced for BOTH 0.5 kW and 1.2 kW device powers. Only k=0.5 produces any ALLOWs (9 for 0.5 kW device: 8 correct, 1 incorrect; 0 for 1.2 kW). This demonstrates extreme conservatism in the synthetic setting.",
+    "device_power_sensitivity": {
+      "0.5_kW": {
+        "k=0.5": "9 ALLOWs (8 CA, 1 IA), Incorrect-ALLOW rate 0.6%",
+        "k>=1.0": "0 ALLOWs for all k — 100% DENY"
+      },
+      "1.2_kW": {
+        "all_k": "0 ALLOWs for all k including k=0.5 — system never ALLOWs a 1.2 kW device in this synthetic pairing"
+      }
+    }
+  },
+  "rationale": "k=1.0 is selected as the operating point based on: (1) the k 0.5->1.0 step produces the largest marginal coverage improvement (+4.8pp solar, +9.3pp load) relative to utilization cost (-6.3pp); (2) solar coverage 93.9% and load coverage 88.4% provide reasonable safety margins; (3) 81.5% solar utilization preserves usability; (4) the project safety-first principle prioritizes avoiding unsafe ALLOWs over maximizing utilization. The synthetic decision evaluation (176 pairs) cannot independently validate this choice because k>=1.0 produces zero ALLOWs — this reflects the structural conservatism of compounding solar and load safety margins in a small-scale synthetic pairing, not the real-world operating characteristics of the system.",
+  "extreme_conservatism_flag": "At k>=1.0, the synthetic evaluation produces ZERO ALLOWs for BOTH 0.5 kW and 1.2 kW device powers. This is flagged as an extreme-conservatism limitation. The synthetic decision matrix alone cannot validate k selection; the per-model coverage/utilization trade-off is the primary basis. Real-world validation on co-located data (ESP32, Phase 8) is required to assess actual ALLOW/DENY behavior.",
+  "limitations": [
+    "The synthetic decision evaluation is based on only 176 synthetically aligned solar/load pairs. It demonstrates the decision logic but is NOT evidence of zero real-world grid-usage violations.",
+    "Sigma estimation and coverage evaluation use the same held-out backtest residuals; coverage is NOT an independent out-of-sample calibration result.",
+    "The chosen k should be validated on real co-located data (ESP32, Phase 8) before deployment."
+  ],
+  "sigma_method_for_deployed_decision_engine": "bucketed (solar: cloud-cover bucket, load: hour-of-day block)",
+  "sigma_method_for_k_sensitivity": "bucketed (primary) and global (comparison)",
+  "sigma_method_for_synthetic_matrix": "both bucketed and global reported separately",
+  "k_sensitivity_bucketed": {
+    "0.5": {
+      "solar_coverage_%": 89.12,
+      "solar_utilization_%": 87.83,
+      "load_coverage_%": 79.04,
+      "synth_allows_0.5kW": 9,
+      "synth_incorrect_allow_0.5kW": 1,
+      "synth_allows_1.2kW": 0,
+      "synth_incorrect_allow_1.2kW": 0
+    },
+    "1.0": {
+      "solar_coverage_%": 93.92,
+      "solar_utilization_%": 81.50,
+      "load_coverage_%": 88.36,
+      "synth_allows_0.5kW": 0,
+      "synth_incorrect_allow_0.5kW": 0,
+      "synth_allows_1.2kW": 0,
+      "synth_incorrect_allow_1.2kW": 0
+    },
+    "1.5": {
+      "solar_coverage_%": 96.05,
+      "solar_utilization_%": 75.69,
+      "load_coverage_%": 93.17,
+      "synth_allows_0.5kW": 0,
+      "synth_incorrect_allow_0.5kW": 0,
+      "synth_allows_1.2kW": 0,
+      "synth_incorrect_allow_1.2kW": 0
+    },
+    "2.0": {
+      "solar_coverage_%": 97.36,
+      "solar_utilization_%": 70.13,
+      "load_coverage_%": 96.19,
+      "synth_allows_0.5kW": 0,
+      "synth_incorrect_allow_0.5kW": 0,
+      "synth_allows_1.2kW": 0,
+      "synth_incorrect_allow_1.2kW": 0
+    },
+    "2.5": {
+      "solar_coverage_%": 98.32,
+      "solar_utilization_%": 64.75,
+      "load_coverage_%": 97.96,
+      "synth_allows_0.5kW": 0,
+      "synth_incorrect_allow_0.5kW": 0,
+      "synth_allows_1.2kW": 0,
+      "synth_incorrect_allow_1.2kW": 0
+    }
+  }
+}

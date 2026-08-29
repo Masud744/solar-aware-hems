@@ -1,0 +1,277 @@
+{
+  "Root Health Check": {
+    "status_code": 200,
+    "request": null,
+    "response": {
+      "status": "healthy",
+      "service": "HEMS Backend",
+      "version": "0.1.0"
+    },
+    "is_correct": true,
+    "notes": "API online"
+  },
+  "GET /predict/solar": {
+    "status_code": 200,
+    "request": {
+      "target_time": "2026-08-21T12:00:00"
+    },
+    "response": {
+      "target_time": "2026-08-21T12:00:00",
+      "predicted_kw": 1.471946,
+      "safe_kw": 1.333346,
+      "sigma_kw": 0.1386,
+      "sigma_bucket": "Overcast (61-100%)",
+      "k": 1.0,
+      "cloud_cover": 75.0,
+      "temperature": 32.3,
+      "relative_humidity": 70.0,
+      "wind_speed": 4.7,
+      "model_version": "rf_corrected",
+      "weather_source": "Open-Meteo forecast API"
+    },
+    "is_correct": true,
+    "notes": "Predicted: 1.471946 kW, Safe: 1.333346 kW, Cloud: 75.0%"
+  },
+  "GET /predict/load": {
+    "status_code": 200,
+    "request": {
+      "target_time": "2010-02-04T14:00:00",
+      "temperature_c": -3.5
+    },
+    "response": {
+      "target_time": "2010-02-04T14:00:00",
+      "predicted_kw": 1.245374,
+      "conservative_kw": 1.756774,
+      "sigma_kw": 0.5114,
+      "sigma_bucket": "Afternoon (12-17)",
+      "k": 1.0,
+      "t2m_value": -3.5,
+      "model_version": "rf_corrected",
+      "t2m_disclosure": {
+        "source": "Open-Meteo forecast API (temperature_2m)",
+        "training_source": "NASA POWER reanalysis (T2M) for Sceaux, France",
+        "provenance_note": "The load model was trained on same-timestamp NASA POWER reanalysis T2M, not a genuine future weather forecast. Phase 2 reported metrics reflect performance with observed/reanalysis T2M, not forecast-sourced T2M. Additionally, the deployment location (Kaliakair, BD) differs from the training location (Sceaux, France). These provenance mismatches mean deployed performance may differ from reported backtest metrics."
+      }
+    },
+    "is_correct": true,
+    "notes": "Predicted: 1.245374 kW, Conservative: 1.756774 kW, Bucket: Afternoon (12-17)"
+  },
+  "GET /risk/margin": {
+    "status_code": 200,
+    "request": null,
+    "response": {
+      "k": 1.0,
+      "sigma_method": "bucketed",
+      "solar_sigma_buckets": {
+        "Clear (0-20%)": 0.0851,
+        "Partly Cloudy (21-60%)": 0.1317,
+        "Overcast (61-100%)": 0.1386
+      },
+      "load_sigma_buckets": {
+        "Night (0-5)": 0.2662,
+        "Morning (6-11)": 0.48,
+        "Afternoon (12-17)": 0.5114,
+        "Evening (18-23)": 0.6075
+      },
+      "calibration_disclosure": "Coverage metrics are measured on the same held-out backtest residual set used to estimate sigma. This is NOT an independent out-of-sample calibration result.",
+      "k_selection_rationale": "k=1.0 is the selected operating point based on the observed empirical coverage-utilization trade-off in the current backtest. It is not described as mathematically optimal, statistically optimal, or as having a textbook confidence interpretation."
+    },
+    "is_correct": true,
+    "notes": "k=1.0, Method=bucketed"
+  },
+  "POST /device/check": {
+    "status_code": 200,
+    "request": {
+      "device_name": "Washing Machine",
+      "rated_power_kw": 1.2,
+      "duration_hours": 1.0,
+      "target_time": "2026-08-21T12:00:00",
+      "priority": "normal"
+    },
+    "response": {
+      "decision": "DENY",
+      "device_name": "Washing Machine",
+      "rated_power_kw": 1.2,
+      "target_time": "2026-08-21T12:00:00",
+      "predicted_solar_kw": 1.471946,
+      "safe_solar_kw": 1.333346,
+      "solar_sigma_kw": 0.1386,
+      "predicted_load_kw": 1.119314,
+      "conservative_load_kw": 1.630714,
+      "load_sigma_kw": 0.5114,
+      "safe_surplus_kw": -0.297367,
+      "k": 1.0,
+      "reason": "Safe surplus (-0.297 kW) < device power (1.200 kW). Deficit: 1.497 kW. Insufficient safe solar surplus to power device.",
+      "weather_source": "Open-Meteo forecast API",
+      "t2m_disclosure": {
+        "source": "Open-Meteo forecast API (temperature_2m)",
+        "training_source": "NASA POWER reanalysis (T2M) for Sceaux, France",
+        "provenance_note": "The load model was trained on same-timestamp NASA POWER reanalysis T2M, not a genuine future weather forecast. Phase 2 reported metrics reflect performance with observed/reanalysis T2M, not forecast-sourced T2M. Additionally, the deployment location (Kaliakair, BD) differs from the training location (Sceaux, France). These provenance mismatches mean deployed performance may differ from reported backtest metrics."
+      }
+    },
+    "is_correct": true,
+    "notes": "Decision=DENY, Safe Surplus=-0.297367 kW, Reason=Safe surplus (-0.297 kW) < device power (1.200 kW). Deficit:..."
+  },
+  "POST /schedule/recommend": {
+    "status_code": 200,
+    "request": {
+      "device_name": "Washing Machine",
+      "rated_power_kw": 0.5,
+      "duration_hours": 2.0,
+      "window_start": "2026-08-21T12:00:00",
+      "window_end": "2026-08-21T16:00:00",
+      "priority": "flexible"
+    },
+    "response": {
+      "recommended_start": null,
+      "device_name": "Washing Machine",
+      "rated_power_kw": 0.5,
+      "slots": [
+        {
+          "start_time": "2026-08-21T12:00:00",
+          "safe_surplus_kw": -1.013417,
+          "decision": "DENY",
+          "predicted_solar_kw": 1.471946,
+          "safe_solar_kw": 1.333346,
+          "predicted_load_kw": 1.119314,
+          "conservative_load_kw": 1.630714
+        },
+        {
+          "start_time": "2026-08-21T13:00:00",
+          "safe_surplus_kw": -1.09682,
+          "decision": "DENY",
+          "predicted_solar_kw": 1.499174,
+          "safe_solar_kw": 1.360574,
+          "predicted_load_kw": 1.862591,
+          "conservative_load_kw": 2.373991
+        }
+      ],
+      "scheduling_disclosure": {
+        "method": "recursive_forecasting",
+        "limitations": [
+          "Load predictions beyond t+1 use recursively predicted values for recent lag features, not actual observations. Forecast error compounds with each additional step.",
+          "Rolling mean/std features are computed from actual historical readings only and are NOT updated with recursive predictions.",
+          "T2M is from Open-Meteo forecast for all horizons.",
+          "Per-horizon uncertainty growth is NOT modeled \u2014 the same bucketed sigma is applied at every horizon. This understates uncertainty at longer horizons."
+        ]
+      },
+      "t2m_disclosure": {
+        "source": "Open-Meteo forecast API (temperature_2m)",
+        "training_source": "NASA POWER reanalysis (T2M) for Sceaux, France",
+        "provenance_note": "The load model was trained on same-timestamp NASA POWER reanalysis T2M, not a genuine future weather forecast. Phase 2 reported metrics reflect performance with observed/reanalysis T2M, not forecast-sourced T2M. Additionally, the deployment location (Kaliakair, BD) differs from the training location (Sceaux, France). These provenance mismatches mean deployed performance may differ from reported backtest metrics."
+      }
+    },
+    "is_correct": true,
+    "notes": "Evaluated 2 slots, Recommended: None"
+  },
+  "GET /xai/explanation": {
+    "status_code": 200,
+    "request": {
+      "prediction_type": "solar",
+      "target_time": "2026-08-21T12:00:00"
+    },
+    "response": {
+      "prediction_type": "solar",
+      "target_time": "2026-08-21T12:00:00",
+      "predicted_kw": 1.471946,
+      "feature_contributions": [
+        {
+          "feature_name": "hour",
+          "feature_value": 12.0,
+          "shap_value": 0.6015044635442118
+        },
+        {
+          "feature_name": "relative_humidity",
+          "feature_value": 70.0,
+          "shap_value": 0.2431026537559832
+        },
+        {
+          "feature_name": "temperature",
+          "feature_value": 32.3,
+          "shap_value": 0.22605542265824918
+        },
+        {
+          "feature_name": "cloud_cover",
+          "feature_value": 75.0,
+          "shap_value": -0.050409879790857655
+        },
+        {
+          "feature_name": "day_of_year",
+          "feature_value": 233.0,
+          "shap_value": 0.01809809101320949
+        },
+        {
+          "feature_name": "wind_speed",
+          "feature_value": 4.7,
+          "shap_value": 0.00262747499330007
+        },
+        {
+          "feature_name": "month",
+          "feature_value": 8.0,
+          "shap_value": 0.0008522658195369715
+        }
+      ],
+      "rule_based_explanation": "Solar prediction: 1.472 kW at 12:00. Cloud cover: 75% (Overcast (61-100%)), \u03c3_solar = 0.1386 kW. Top contributor: hour (SHAP=+0.6015 kW).",
+      "shap_source": "TreeExplainer (single-instance SHAP values)"
+    },
+    "is_correct": true,
+    "notes": "Top contributor: hour, Rule: Solar prediction: 1.472 kW at 12:00. Cloud cover: 75% (Overc..."
+  },
+  "POST /action": {
+    "status_code": 200,
+    "request": {
+      "device_request_id": 4,
+      "action": "accept"
+    },
+    "response": {
+      "id": 1,
+      "device_request_id": 4,
+      "action": "accept",
+      "ts": "2026-08-20T19:50:23.307737Z"
+    },
+    "is_correct": true,
+    "notes": "Logged action 'accept' for device_request #4"
+  },
+  "POST /ingest": {
+    "status_code": 200,
+    "request": {
+      "device_id": "esp32_hardware_test",
+      "ts": "2026-08-21T01:50:23",
+      "voltage_v": 230.4,
+      "current_a": 2.15,
+      "power_w": 495.36,
+      "temperature_c": 29.8
+    },
+    "response": {
+      "id": 401,
+      "device_id": "esp32_hardware_test",
+      "ts": "2026-08-21T01:50:23",
+      "status": "inserted"
+    },
+    "is_correct": true,
+    "notes": "Ingested reading for device 'esp32_hardware_test' (id=401)"
+  },
+  "Forecast Horizon Error Handling (422 expected)": {
+    "status_code": 422,
+    "request": {
+      "target_time": "2026-09-30T01:50:23"
+    },
+    "response": {
+      "detail": "Target time 2026-09-30T01:00 is outside the available Open-Meteo forecast horizon. Available range: 2026-08-21T00:00 to 2026-08-27T23:00 (7-day forecast from Kaliakair, BD). Cannot generate prediction without forecast weather features."
+    },
+    "is_correct": true,
+    "notes": "Correctly returned 422 for out-of-horizon target (+40 days)"
+  },
+  "Insufficient History Error Handling (422 expected)": {
+    "status_code": 422,
+    "request": {
+      "target_time": "1999-01-01T12:00:00",
+      "temperature_c": 20.0
+    },
+    "response": {
+      "detail": "Missing exact sensor readings for load prediction at 1999-01-01 12:00:00. Missing lags: power_lag_1 (needed: 1999-01-01T11:00:00), power_lag_2 (needed: 1999-01-01T10:00:00), power_lag_3 (needed: 1999-01-01T09:00:00), power_lag_12 (needed: 1999-01-01T00:00:00), power_lag_24 (needed: 1998-12-31T12:00:00), power_lag_48 (needed: 1998-12-30T12:00:00), power_lag_168 (needed: 1998-12-25T12:00:00). Ensure sensor_readings has hourly data from 1998-12-25 12:00:00 to 1999-01-01 11:00:00."
+    },
+    "is_correct": true,
+    "notes": "Correctly returned 422 for missing historical lags (1999)"
+  }
+}

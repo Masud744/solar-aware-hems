@@ -1,0 +1,7 @@
+{
+  "model": "Linear Regression",
+  "MAE_kW": 0.368213,
+  "RMSE_kW": 0.519126,
+  "R2": 0.531294,
+  "MAPE_%": 47.9987
+}

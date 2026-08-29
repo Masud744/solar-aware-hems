@@ -1,0 +1,2 @@
+model,MAE_kW,RMSE_kW,R2,MAPE_%
+RF Leaky Baseline,0.015906,0.023158,0.999335,2.2923

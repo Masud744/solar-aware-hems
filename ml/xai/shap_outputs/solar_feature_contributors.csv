@@ -1,0 +1,8 @@
+feature,mean_abs_shap,shap_feature_corr,effect_direction
+hour,0.324798,-0.0401,~0
+relative_humidity,0.194987,-0.9066,-
+temperature,0.084178,0.711,+
+cloud_cover,0.031786,-0.7576,-
+day_of_year,0.010832,0.2305,+
+wind_speed,0.003,-0.1409,-
+month,0.000561,0.0575,~0

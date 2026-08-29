@@ -1,0 +1,2 @@
+model,MAE_kW,RMSE_kW,R2,MAPE_%
+Random Forest,0.064134,0.124356,0.954743,49.4219

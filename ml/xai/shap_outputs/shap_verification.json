@@ -1,0 +1,18 @@
+{
+  "solar": {
+    "model": "Solar RF (Corrected)",
+    "base_value": 0.4301158624858578,
+    "max_reconstruction_error": 5.417888360170764e-14,
+    "mean_reconstruction_error": 7.503982269140836e-15,
+    "all_within_1e-6": true,
+    "n_test_samples": 11612
+  },
+  "load": {
+    "model": "Load RF (Corrected)",
+    "base_value": 1.1092321440182686,
+    "max_reconstruction_error": 1.709743457922741e-13,
+    "mean_reconstruction_error": 1.1617459053002556e-14,
+    "all_within_1e-6": true,
+    "n_test_samples": 6532
+  }
+}

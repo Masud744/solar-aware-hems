@@ -1,0 +1,7 @@
+{
+  "model": "RF Leaky Baseline",
+  "MAE_kW": 0.015906,
+  "RMSE_kW": 0.023158,
+  "R2": 0.999335,
+  "MAPE_%": 2.2923
+}

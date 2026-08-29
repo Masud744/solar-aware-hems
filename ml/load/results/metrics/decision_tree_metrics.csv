@@ -1,0 +1,2 @@
+model,MAE_kW,RMSE_kW,R2,MAPE_%
+Decision Tree,0.371136,0.544852,0.483688,45.5246

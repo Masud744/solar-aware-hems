@@ -1,0 +1,11 @@
+{
+  "sigma_solar_global_kW": 0.1224830862635746,
+  "sigma_load_global_kW": 0.483108777097858,
+  "solar_test_samples": 11612,
+  "load_test_samples": 6532,
+  "solar_residual_mean": 0.02153393022944025,
+  "solar_residual_median": 0.0,
+  "load_residual_mean": -0.027030173748625902,
+  "load_residual_median": -0.05480688874391898,
+  "calibration_disclosure": "Coverage is measured on the same held-out backtest residual set used to estimate sigma. This is NOT an independent out-of-sample calibration result."
+}

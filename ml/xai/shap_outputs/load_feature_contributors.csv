@@ -1,0 +1,17 @@
+feature,mean_abs_shap,shap_feature_corr,effect_direction
+power_lag_1,0.450085,0.9795,+
+hour,0.106258,0.459,+
+power_lag_168,0.07051,0.8782,+
+power_lag_24,0.040809,0.8314,+
+power_lag_2,0.038319,-0.6905,-
+T2M,0.025336,-0.8262,-
+power_lag_48,0.024726,0.8358,+
+power_lag_12,0.024241,0.7739,+
+power_lag_3,0.015877,-0.1109,-
+rolling_mean_3h,0.013957,-0.5372,-
+rolling_mean_168h,0.010365,0.4971,+
+day_of_week,0.009183,0.306,+
+rolling_std_24h,0.008072,0.3244,+
+rolling_mean_24h,0.00691,0.0139,~0
+month,0.005377,0.0306,~0
+is_weekend,0.00449,0.6271,+
