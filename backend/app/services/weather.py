@@ -59,8 +59,13 @@ async def _fetch_forecast() -> dict:
         "timezone": settings.TIMEZONE,
     }
 
+    headers = {
+        "User-Agent": "SolarMate-HEMS/0.1.1 (https://github.com/Masud744/solar-aware-hems; contact: hems-research@masud.dev)",
+        "Accept": "application/json",
+    }
+
     try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
+        async with httpx.AsyncClient(timeout=15.0, headers=headers) as client:
             resp = await client.get(url, params=params)
             resp.raise_for_status()
             data = resp.json()
