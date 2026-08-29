@@ -304,7 +304,7 @@ Retrieve historical conversation turns for a given session ID.
 
 ### Existing Implemented Tools & Safety Architecture
 
-The assistant executes multi-turn function calling strictly across these **9 controlled backend tools**:
+The assistant executes multi-turn function calling strictly across these **10 controlled backend tools**:
 
 1. `get_live_telemetry`: Queries latest verified ESP32 electrical (voltage, current, power) and ambient (DHT22) readings.
 2. `get_relay_status`: Reads current 4-channel circuit routing states (`grid`, `solar`, `off`).
@@ -313,21 +313,13 @@ The assistant executes multi-turn function calling strictly across these **9 con
 5. `get_24h_horizon_summary`: Retrieves the 24-hour safe solar surplus profile and optimal scheduling window.
 6. `check_appliance_safety`: Executes deterministic $k \times \sigma$ decision evaluation for a specified appliance power and duration.
 7. `get_schedule_recommendation`: Identifies the optimal future time window to run an appliance on solar surplus.
-8. `get_energy_summary`: Retrieves today and monthly energy totals, solar utilization, and monetary tariff savings.
-9. `update_user_solar_estimate`: Updates user-reported daily solar estimate in PostgreSQL (requires explicit confirmation flow).
+8. `get_configured_appliances`: Retrieves the technical power ratings and duration presets for configured appliances.
+9. `get_energy_summary`: Retrieves today and monthly energy totals, solar utilization, and monetary tariff savings.
+10. `update_user_solar_estimate`: Updates user-reported daily solar estimate in PostgreSQL (requires explicit confirmation flow).
 
 #### Strict Cyber-Physical Safety Invariant
 * **No Direct Hardware Control:** The architecture does not expose relay actuation endpoints to the LLM tool schema.
 * **Deterministic Decision Authority:** Appliance safety recommendations (`ALLOW`/`DENY`) are computed deterministically by `decision_engine.py`; the LLM formats and explains these outputs but cannot alter mathematical risk thresholds or directly switch physical electrical circuits.
-
-**Request:**
-```json
-{
-  "date": "2026-08-29",
-  "estimated_solar_kwh": 0.25,
-  "notes": "Clear morning sunny generation"
-}
-```
 
 ---
 
