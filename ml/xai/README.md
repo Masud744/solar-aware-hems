@@ -1,7 +1,6 @@
 # Explainable AI (XAI) — SHAP Analysis
 
 > **Project:** Risk-Aware and Explainable AI for Solar-Integrated Residential Energy Management Under Forecast Uncertainty: An IoT-Enabled Framework (Solar-Aware HEMS)  
-> **Status:** Phase 3 Complete — Verification Gate PASSED
 
 ## Overview
 
