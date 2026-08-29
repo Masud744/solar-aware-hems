@@ -302,8 +302,13 @@ async def schedule_recommend(req: ScheduleRecommendRequest):
                 best_surplus = slot_surplus
                 best_slot = current
 
+        except weather.WeatherForecastError as e:
+            raise HTTPException(
+                status_code=503,
+                detail=f"Weather forecast unavailable from Open-Meteo. Cannot generate schedule without forecast features. Error: {e}",
+            )
         except (weather.ForecastHorizonError, features.InsufficientHistoryError):
-            # Skip this slot if forecast/history is unavailable
+            # Skip this slot if forecast horizon or sensor history is unavailable
             pass
 
         current += timedelta(hours=1)
@@ -313,7 +318,7 @@ async def schedule_recommend(req: ScheduleRecommendRequest):
             status_code=422,
             detail=(
                 "No valid time slots in the requested window. "
-                "Weather forecast or sensor history may be unavailable."
+                "Target horizon is outside available forecast window or insufficient sensor history."
             ),
         )
 

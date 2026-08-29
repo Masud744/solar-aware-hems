@@ -6,15 +6,30 @@ import { describeCloudCover, formatTemp, formatHumidity } from '../../utils/form
 import { LOCATION } from '../../utils/constants';
 import type { SolarPrediction } from '../../types';
 
-export function WeatherContext() {
-  const [weather, setWeather] = useState<SolarPrediction | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+interface Props {
+  weather?: SolarPrediction | null;
+  loading?: boolean;
+  error?: string | null;
+}
+
+export function WeatherContext({
+  weather: propWeather,
+  loading: propLoading,
+  error: propError,
+}: Props = {}) {
+  const [internalWeather, setInternalWeather] = useState<SolarPrediction | null>(null);
+  const [internalLoading, setInternalLoading] = useState(false);
+  const [internalError, setInternalError] = useState<string | null>(null);
   const daylight = getDaylightInfo();
 
+  const isControlled = propWeather !== undefined || propLoading !== undefined || propError !== undefined;
+
   useEffect(() => {
+    if (isControlled) return;
+
     let cancelled = false;
     const fetchWeather = async () => {
+      setInternalLoading(true);
       try {
         const now = new Date();
         now.setMinutes(0, 0, 0);
@@ -22,15 +37,19 @@ export function WeatherContext() {
         const pad = (n: number) => String(n).padStart(2, '0');
         const iso = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:00:00`;
         const res = await fetchSolarPrediction(iso);
-        if (!cancelled) { setWeather(res); setLoading(false); setError(null); }
+        if (!cancelled) { setInternalWeather(res); setInternalLoading(false); setInternalError(null); }
       } catch {
-        if (!cancelled) { setLoading(false); setError('Weather service unavailable'); }
+        if (!cancelled) { setInternalLoading(false); setInternalError('Weather service unavailable'); }
       }
     };
     fetchWeather();
     const interval = setInterval(fetchWeather, 15 * 60 * 1000);
     return () => { cancelled = true; clearInterval(interval); };
-  }, []);
+  }, [isControlled]);
+
+  const weather = isControlled ? propWeather : internalWeather;
+  const loading = isControlled ? (propLoading ?? false) : internalLoading;
+  const error = isControlled ? propError : internalError;
 
   if (loading) {
     return (

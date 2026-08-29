@@ -3,16 +3,35 @@
 # The backend owns weather data retrieval. The frontend never needs
 # provider-specific Open-Meteo logic.
 
+import asyncio
+import logging
 import httpx
 from datetime import datetime, timedelta
 from typing import Optional
 from app.config import settings
 
+logger = logging.getLogger(__name__)
+
+# Concurrency lock for forecast fetching
+_fetch_lock: Optional[asyncio.Lock] = None
+
+
+def _get_fetch_lock() -> asyncio.Lock:
+    global _fetch_lock
+    if _fetch_lock is None:
+        _fetch_lock = asyncio.Lock()
+    return _fetch_lock
+
+
 # In-memory cache: stores the last fetched forecast
 _cache: dict = {
-    "fetched_at": None,  # datetime of last fetch
-    "data": None,        # parsed hourly forecast dict
-    "cache_ttl_seconds": 3600,  # 1 hour cache
+    "fetched_at": None,          # datetime of last successful fetch
+    "data": None,                # parsed hourly forecast dict
+    "cache_ttl_seconds": 3600,   # 1 hour cache for successful responses
+    "negative_ttl_seconds": 60,  # 60s backoff after a failed upstream fetch
+    "last_error": None,          # string description of last fetch error
+    "last_error_at": None,       # datetime of last fetch error
+    "is_stale": False,           # True if serving cached data after a refresh failure
 }
 
 
@@ -67,6 +86,13 @@ async def _fetch_forecast() -> dict:
     return parsed
 
 
+def _is_cache_fresh(now: datetime) -> bool:
+    """Check if the cache has valid, fresh forecast data within the 1-hour TTL."""
+    if _cache["data"] is None or _cache["fetched_at"] is None:
+        return False
+    return (now - _cache["fetched_at"]).total_seconds() <= _cache["cache_ttl_seconds"]
+
+
 async def get_forecast_at(target_time: datetime) -> dict:
     """Get weather forecast values at the specified hour.
 
@@ -81,41 +107,85 @@ async def get_forecast_at(target_time: datetime) -> dict:
 
     now = datetime.now()
 
-    # Refresh cache if stale or empty
-    if (
-        _cache["data"] is None
-        or _cache["fetched_at"] is None
-        or (now - _cache["fetched_at"]).total_seconds() > _cache["cache_ttl_seconds"]
-    ):
-        _cache["data"] = await _fetch_forecast()
-        _cache["fetched_at"] = now
+    # 1. Non-blocking check for fresh cache
+    if not _is_cache_fresh(now):
+        lock = _get_fetch_lock()
+        async with lock:
+            # 2. Re-check under lock (double-checked locking pattern)
+            if not _is_cache_fresh(now):
+                # Check negative cache / failure backoff if cache is empty
+                if _cache["data"] is None and _cache["last_error_at"] is not None:
+                    elapsed_err = (now - _cache["last_error_at"]).total_seconds()
+                    if elapsed_err < _cache["negative_ttl_seconds"]:
+                        remaining = int(_cache["negative_ttl_seconds"] - elapsed_err)
+                        raise WeatherForecastError(
+                            f"Weather forecast temporarily unavailable (upstream backoff active, retry in "
+                            f"{remaining}s). Last error: {_cache['last_error']}"
+                        )
+
+                try:
+                    new_data = await _fetch_forecast()
+                    _cache["data"] = new_data
+                    _cache["fetched_at"] = now
+                    _cache["last_error"] = None
+                    _cache["last_error_at"] = None
+                    _cache["is_stale"] = False
+                except WeatherForecastError as e:
+                    _cache["last_error"] = str(e)
+                    _cache["last_error_at"] = now
+
+                    # If we have last-known-good data, preserve it and serve stale
+                    if _cache["data"] is not None:
+                        _cache["is_stale"] = True
+                        logger.warning(
+                            "Open-Meteo refresh failed (%s). Serving last-known-good forecast from %s.",
+                            e,
+                            _cache["fetched_at"],
+                        )
+                    else:
+                        raise
 
     forecast = _cache["data"]
+    if forecast is None:
+        raise WeatherForecastError(
+            f"Weather forecast unavailable from Open-Meteo: {_cache.get('last_error', 'No forecast data')}"
+        )
 
     # Build the lookup key — Open-Meteo returns timestamps like "2026-08-21T14:00"
-    # Truncate to the hour
     target_hour = target_time.replace(minute=0, second=0, microsecond=0)
     ts_key = target_hour.strftime("%Y-%m-%dT%H:%M")
 
     if ts_key not in forecast:
-        # Check if it's outside the horizon
         available_times = sorted(forecast.keys())
+        range_str = f"{available_times[0]} to {available_times[-1]}" if available_times else "empty"
         raise ForecastHorizonError(
             f"Target time {ts_key} is outside the available Open-Meteo forecast "
-            f"horizon. Available range: {available_times[0]} to {available_times[-1]} "
+            f"horizon. Available range: {range_str} "
             f"({settings.FORECAST_DAYS}-day forecast from Kaliakair, BD). "
             f"Cannot generate prediction without forecast weather features."
         )
 
     wx = forecast[ts_key]
 
-    # Map Open-Meteo variable names to model feature names
     return {
         "cloud_cover": wx["cloud_cover"],
         "temperature": wx["temperature_2m"],        # Solar model: 'temperature'
         "relative_humidity": wx["relative_humidity_2m"],
         "wind_speed": wx["wind_speed_10m"],
         "T2M": wx["temperature_2m"],                # Load model: 'T2M'
+    }
+
+
+def get_cache_diagnostics() -> dict:
+    """Return cache diagnostics for observability and health checks."""
+    now = datetime.now()
+    return {
+        "has_data": _cache["data"] is not None,
+        "fetched_at": _cache["fetched_at"].isoformat() if _cache["fetched_at"] else None,
+        "is_stale": _cache["is_stale"],
+        "is_fresh": _is_cache_fresh(now),
+        "last_error": _cache["last_error"],
+        "last_error_at": _cache["last_error_at"].isoformat() if _cache["last_error_at"] else None,
     }
 
 

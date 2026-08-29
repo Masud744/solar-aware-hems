@@ -35,9 +35,9 @@
 #define SP_RESET_PIN          0       // GPIO 0 (BOOT button) for factory reset
 #define SP_AP_PREFIX          "HEMS"  // AP name prefix: "HEMS_XXXX"
 
-#define BACKEND_HOST          "https://share-affiliates-program-palm.trycloudflare.com"
-#define INGEST_ENDPOINT       BACKEND_HOST "/ingest"
-#define ACTION_POLL_ENDPOINT  BACKEND_HOST "/api/device/status"
+#define BACKEND_HOST "https://solar-aware-hems.onrender.com"
+#define INGEST_ENDPOINT BACKEND_HOST "/ingest"
+#define ACTION_POLL_ENDPOINT BACKEND_HOST "/api/device/status"
 
 #define INGEST_INTERVAL_MS    3000   // Telemetry push interval (3 seconds)
 #define POLL_INTERVAL_MS      1500   // Backend command poll interval (1.5 seconds)

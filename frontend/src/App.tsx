@@ -40,17 +40,23 @@ function AppShell() {
   // 24-Hour Forecast Horizon State (cached via forecastCache)
   const [timeline, setTimeline] = useState<HourlyForecastData[]>([]);
   const [riskMargin, setRiskMargin] = useState<RiskMargin | null>(null);
+  const [firstHourSolar, setFirstHourSolar] = useState<import('./types').SolarPrediction | null>(null);
   const [forecastLoading, setForecastLoading] = useState(true);
+  const [forecastError, setForecastError] = useState<string | null>(null);
 
   // Fetch forecast timeline on mount and periodic 5-minute interval (with 30-min cache hit)
   const loadForecast = useCallback(async (force = false) => {
     setForecastLoading(true);
+    setForecastError(null);
     try {
-      const { timeline: rows, riskMargin: rm } = await forecastCache.build24HourTimeline(new Date(), { forceRefresh: force });
+      const { timeline: rows, riskMargin: rm, firstHourSolar: fhs } = await forecastCache.build24HourTimeline(new Date(), { forceRefresh: force });
       setTimeline(rows);
       setRiskMargin(rm);
-    } catch {
+      setFirstHourSolar(fhs);
+    } catch (err: any) {
       setTimeline([]);
+      setFirstHourSolar(null);
+      setForecastError(err?.message || 'Forecast stream currently unavailable.');
     } finally {
       setForecastLoading(false);
     }
@@ -89,10 +95,12 @@ function AppShell() {
               deviceStatus={deviceStatus}
               timeline={timeline}
               riskMargin={riskMargin}
+              firstHourSolar={firstHourSolar}
               loadStates={loadStates}
               telemetryLoading={telemetryLoading}
               forecastLoading={forecastLoading}
               error={error}
+              forecastError={forecastError}
               backendOnline={backendOnline}
               onSetSource={handleSetSource}
               onEmergencyOff={handleEmergencyOff}
@@ -211,10 +219,12 @@ interface HomePageProps {
   deviceStatus: DeviceStatus | null;
   timeline: HourlyForecastData[];
   riskMargin: RiskMargin | null;
+  firstHourSolar: import('./types').SolarPrediction | null;
   loadStates: ReturnType<typeof useDeviceControl>['loadStates'];
   telemetryLoading: boolean;
   forecastLoading: boolean;
   error: string | null;
+  forecastError: string | null;
   backendOnline: boolean;
   onSetSource: (key: string, source: LoadSource) => Promise<void>;
   onEmergencyOff: () => Promise<void>;
@@ -227,10 +237,12 @@ function HomePage({
   deviceStatus,
   timeline,
   riskMargin,
+  firstHourSolar,
   loadStates,
   telemetryLoading,
   forecastLoading,
   error,
+  forecastError,
   backendOnline,
   onSetSource,
   onEmergencyOff,
@@ -247,7 +259,11 @@ function HomePage({
         onNavigateAppliances={() => onNavigate?.('appliances')}
       />
 
-      <WeatherContext />
+      <WeatherContext
+        weather={firstHourSolar}
+        loading={forecastLoading}
+        error={forecastError}
+      />
 
       <HorizonOutlookChart
         timeline={timeline}
