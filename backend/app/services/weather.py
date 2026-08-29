@@ -91,6 +91,45 @@ async def _fetch_forecast() -> dict:
     return parsed
 
 
+def _load_persisted_cache() -> bool:
+    """Load persisted forecast from Supabase database to seed empty memory cache."""
+    try:
+        from app.database import get_supabase
+        import json
+        sb = get_supabase()
+        res = sb.table("user_solar_estimates").select("*").eq("date", "2099-12-31").limit(1).execute()
+        if res.data and res.data[0].get("notes"):
+            payload = json.loads(res.data[0]["notes"])
+            if payload.get("data") and payload.get("fetched_at"):
+                _cache["data"] = payload["data"]
+                _cache["fetched_at"] = datetime.fromisoformat(payload["fetched_at"])
+                _cache["is_stale"] = True
+                logger.info("Seeded weather cache from Supabase persistent store (fetched at %s).", _cache["fetched_at"])
+                return True
+    except Exception as e:
+        logger.warning("Could not seed weather cache from Supabase: %s", e)
+    return False
+
+
+def _save_persisted_cache(data: dict, fetched_at: datetime):
+    """Save latest forecast data to Supabase database for durability across reboots."""
+    try:
+        from app.database import get_supabase
+        import json
+        sb = get_supabase()
+        payload = {
+            "fetched_at": fetched_at.isoformat(),
+            "data": data,
+        }
+        sb.table("user_solar_estimates").upsert({
+            "date": "2099-12-31",
+            "estimated_solar_kwh": 0.0,
+            "notes": json.dumps(payload),
+        }, on_conflict="date").execute()
+    except Exception as e:
+        logger.warning("Could not persist weather cache to Supabase: %s", e)
+
+
 def _is_cache_fresh(now: datetime) -> bool:
     """Check if the cache has valid, fresh forecast data within the 1-hour TTL."""
     if _cache["data"] is None or _cache["fetched_at"] is None:
@@ -116,6 +155,10 @@ async def get_forecast_at(target_time: datetime) -> dict:
     if not _is_cache_fresh(now):
         lock = _get_fetch_lock()
         async with lock:
+            # Seed from database if memory cache is completely unpopulated
+            if _cache["data"] is None:
+                _load_persisted_cache()
+
             # 2. Re-check under lock (double-checked locking pattern)
             if not _is_cache_fresh(now):
                 # Check negative cache / failure backoff if cache is empty
@@ -135,6 +178,7 @@ async def get_forecast_at(target_time: datetime) -> dict:
                     _cache["last_error"] = None
                     _cache["last_error_at"] = None
                     _cache["is_stale"] = False
+                    _save_persisted_cache(new_data, now)
                 except WeatherForecastError as e:
                     _cache["last_error"] = str(e)
                     _cache["last_error_at"] = now
