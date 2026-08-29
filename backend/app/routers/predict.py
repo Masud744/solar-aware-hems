@@ -61,6 +61,8 @@ async def _handle_solar_prediction(target_time: datetime) -> SolarPredictionResp
         relative_humidity=wx["relative_humidity"],
         wind_speed=wx["wind_speed"],
         model_version=solar_version,
+        is_stale=wx.get("is_stale", False),
+        cached_at=wx.get("cached_at"),
     )
 
 
@@ -68,12 +70,17 @@ async def _handle_load_prediction(target_time: datetime, temperature_c: Optional
     """Internal handler for load prediction."""
     target_hour = target_time.replace(minute=0, second=0, microsecond=0)
 
+    is_stale = False
+    cached_at = None
+
     if temperature_c is not None:
         t2m = temperature_c
     else:
         try:
             wx = await weather.get_forecast_at(target_time)
             t2m = wx["T2M"]
+            is_stale = wx.get("is_stale", False)
+            cached_at = wx.get("cached_at")
         except weather.ForecastHorizonError as e:
             raise HTTPException(status_code=422, detail=str(e))
         except weather.WeatherForecastError as e:
@@ -111,6 +118,8 @@ async def _handle_load_prediction(target_time: datetime, temperature_c: Optional
         history_mode=provenance["mode"],
         feature_provenance=provenance,
         t2m_disclosure=weather.get_t2m_disclosure(),
+        is_stale=is_stale,
+        cached_at=cached_at,
     )
 
 

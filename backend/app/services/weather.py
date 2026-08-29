@@ -183,8 +183,13 @@ async def get_forecast_at(target_time: datetime) -> dict:
                     _cache["last_error"] = str(e)
                     _cache["last_error_at"] = now
 
-                    # If we have last-known-good data, preserve it and serve stale
+                    # If we have last-known-good data, check maximum permitted stale age
                     if _cache["data"] is not None:
+                        if _cache["fetched_at"] is not None and (now - _cache["fetched_at"]).total_seconds() > 86400:
+                            _cache["data"] = None
+                            raise WeatherForecastError(
+                                f"Persisted forecast expired (older than 24h). Cannot reliably generate predictions without fresh weather data. Upstream error: {e}"
+                            )
                         _cache["is_stale"] = True
                         logger.warning(
                             "Open-Meteo refresh failed (%s). Serving last-known-good forecast from %s.",
@@ -222,6 +227,8 @@ async def get_forecast_at(target_time: datetime) -> dict:
         "relative_humidity": wx["relative_humidity_2m"],
         "wind_speed": wx["wind_speed_10m"],
         "T2M": wx["temperature_2m"],                # Load model: 'T2M'
+        "is_stale": _cache.get("is_stale", False),
+        "cached_at": _cache.get("fetched_at"),
     }
 
 

@@ -220,7 +220,7 @@ async def schedule_recommend(req: ScheduleRecommendRequest):
     recursive_load_cache: dict[str, float] = {}
     primary_history_mode = "real_history"
 
-    while current < window_end:
+    while current <= window_end:
         try:
             if n_hours == 1:
                 (solar_pred, load_pred, sigma_solar, sigma_load,
@@ -322,6 +322,8 @@ async def schedule_recommend(req: ScheduleRecommendRequest):
             ),
         )
 
+    diag = weather.get_cache_diagnostics()
+
     return ScheduleRecommendResponse(
         recommended_start=best_slot,
         device_name=req.device_name,
@@ -343,6 +345,8 @@ async def schedule_recommend(req: ScheduleRecommendRequest):
             ],
         },
         t2m_disclosure=weather.get_t2m_disclosure(),
+        is_stale=diag.get("is_stale", False),
+        cached_at=datetime.fromisoformat(diag["fetched_at"]) if diag.get("fetched_at") else None,
     )
 
 

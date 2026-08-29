@@ -83,6 +83,8 @@ export interface SolarPrediction {
   wind_speed: number;
   model_version: string;
   weather_source: string;
+  is_stale?: boolean;
+  cached_at?: string | null;
 }
 
 // ── Load Prediction ──────────────────────────────────────────────
@@ -98,6 +100,8 @@ export interface LoadPrediction {
   history_mode?: 'real_history' | 'benchmark_profile_fallback';
   feature_provenance?: Record<string, any>;
   t2m_disclosure: T2MDisclosure;
+  is_stale?: boolean;
+  cached_at?: string | null;
 }
 
 export interface T2MDisclosure {
@@ -163,6 +167,8 @@ export interface ScheduleRecommendResponse {
     limitations: string[];
   };
   t2m_disclosure: T2MDisclosure;
+  is_stale?: boolean;
+  cached_at?: string | null;
 }
 
 // ── XAI ──────────────────────────────────────────────────────────
@@ -293,6 +299,8 @@ export interface HourlyForecastData {
   loadBucket: string;
   safeSurplusKw: number | null;
   historyMode?: 'real_history' | 'benchmark_profile_fallback';
+  isStale?: boolean;
+  cachedAt?: string | null;
 }
 
 export interface EventItem {

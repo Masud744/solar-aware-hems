@@ -221,6 +221,8 @@ class ForecastCacheService {
           loadBucket: 'Standard',
           safeSurplusKw,
           historyMode: slot.history_mode ?? scheduleRes.history_mode ?? 'benchmark_profile_fallback',
+          isStale: scheduleRes.is_stale ?? false,
+          cachedAt: scheduleRes.cached_at ?? null,
         };
       });
 
@@ -237,6 +239,8 @@ class ForecastCacheService {
         wind_speed: 2,
         model_version: 'rf_corrected',
         weather_source: 'Open-Meteo forecast API',
+        is_stale: scheduleRes.is_stale ?? false,
+        cached_at: scheduleRes.cached_at ?? null,
       } : null;
 
       const firstHourLoad: LoadPrediction | null = (timeline[0] && timeline[0].conservativeLoadKw !== null) ? {
@@ -249,6 +253,8 @@ class ForecastCacheService {
         t2m_value: 25,
         model_version: 'rf_corrected',
         t2m_disclosure: { source: 'Open-Meteo', training_source: 'UCI', provenance_note: '' },
+        is_stale: scheduleRes.is_stale ?? false,
+        cached_at: scheduleRes.cached_at ?? null,
       } : null;
 
       const result = {

@@ -227,7 +227,10 @@ async def process_chat_message(
                     await asyncio.sleep(2.5 * (retry + 1))
                 else:
                     logger.error(f"Groq API completion error: {e}")
-                    fail_reply = "I encountered an error communicating with the AI service. Please try again in a moment."
+                    if "401" in err_str or "invalid_api_key" in err_str or "invalid api key" in err_str:
+                        fail_reply = "The SolarMate AI Assistant is temporarily unavailable because the upstream LLM API key is invalid or unconfigured in production settings. Real-time telemetry, solar forecasts, and appliance safety checks remain fully functional on your dashboard."
+                    else:
+                        fail_reply = "I encountered an error communicating with the AI service. Please try again in a moment."
                     save_message_to_db(active_session_id, "assistant", fail_reply, user_id=user_id, data_sources=list(collected_provenance), tool_calls=executed_tools)
                     return {
                         "session_id": active_session_id,

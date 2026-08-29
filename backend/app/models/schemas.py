@@ -25,6 +25,8 @@ class SolarPredictionResponse(BaseModel):
     wind_speed: float
     model_version: str
     weather_source: str = "Open-Meteo forecast API"
+    is_stale: bool = False
+    cached_at: Optional[datetime] = None
 
 
 class LoadPredictionRequest(BaseModel):
@@ -48,6 +50,8 @@ class LoadPredictionResponse(BaseModel):
     history_mode: str = "benchmark_profile_fallback"
     feature_provenance: Optional[dict] = None
     t2m_disclosure: dict
+    is_stale: bool = False
+    cached_at: Optional[datetime] = None
 
 
 # ── Risk endpoint ──────────────────────────────────────────────────────
@@ -134,6 +138,8 @@ class ScheduleRecommendResponse(BaseModel):
     history_mode: str = "benchmark_profile_fallback"
     scheduling_disclosure: dict
     t2m_disclosure: dict
+    is_stale: bool = False
+    cached_at: Optional[datetime] = None
 
 
 # ── XAI endpoint ──────────────────────────────────────────────────────

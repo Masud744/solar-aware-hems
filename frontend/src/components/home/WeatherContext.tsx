@@ -76,6 +76,22 @@ export function WeatherContext({
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span className="sect-label">Outdoor Weather (Open-Meteo)</span>
           <DataHonestyTag type="FORECAST" size="sm" tooltip="External forecast weather for Kaliakair, BD (distinct from indoor DHT22 sensor)" />
+          {weather?.is_stale && (
+            <span
+              style={{
+                fontSize: '0.6875rem',
+                padding: '2px 6px',
+                borderRadius: '4px',
+                background: 'rgba(245, 158, 11, 0.15)',
+                color: '#fbbf24',
+                border: '1px solid rgba(245, 158, 11, 0.3)',
+                fontWeight: 600,
+              }}
+              title={weather.cached_at ? `Served from cache timestamp: ${new Date(weather.cached_at).toLocaleString()}` : 'Cached forecast'}
+            >
+              ⚠️ Cached Baseline (Stale)
+            </span>
+          )}
         </div>
         <span className="sect-sublabel">{LOCATION.name}</span>
       </div>
