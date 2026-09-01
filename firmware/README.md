@@ -176,7 +176,7 @@ Follow these 4 steps in order on the dashboard (`Live Operations -> Remote Senso
 | Step | Operation | Condition Required | Physical Action & Empirical Basis |
 |---|---|---|---|
 | **Step 1** | **`CAL_ZERO` (Zero-Offset)** | **No-Load Condition** ($I = 0\text{ A}$) | Click **"Run 3s Zero-Offset Calibration"**. The system automatically forces all 4 relays to `OFF`. The ESP32 measures the quiescent zero-current and zero-voltage bias levels for 3000 ms ($V_{\text{zero}} = 2539.65$, $I_{\text{zero}} = 2537.18$) and persists them to NVS. |
-| **Step 2** | **`SET_VCAL` (Voltage Scaling)** | **Live 230V Mains Reference** | Measure true AC mains voltage with a calibrated True-RMS Multimeter at the wall socket ($V_{\text{ref}} = 225.00\text{ V}$). Apply calibrated factor ($K_V = 0.619060$) to NVS. Live telemetry reads $228.16\text{ V}$ ($1.40\%$ error vs $225.00\text{ V}$ calibration reference; $0.96\%$ error vs later $\approx 226\text{ V}$ validation observation). |
+| **Step 2** | **`SET_VCAL` (Voltage Scaling)** | **Live 230V Mains Reference** | Measure true AC mains voltage with a calibrated True-RMS Multimeter at the wall socket ($V_{\text{ref}} = 225.00\text{ V}$). Apply calibrated factor ($K_V = 0.619060$) to NVS. Live telemetry reads $228.16\text{ V}$ ($1.40\%$ calibration-session residual offset vs $225.00\text{ V}$ reference; $0.96\%$ cross-session observational delta vs later $\approx 226\text{ V}$ DMM reading). |
 | **Step 3** | **`SET_SENS` (Sensor Variant)** | **Sensor Identification** | Confirm physical ACS712-20A module ($100\text{ mV/A}$). With $10\text{k}\Omega / 15\text{k}\Omega$ divider ($\alpha = 0.600$), effective pin sensitivity is $60.0\text{ mV/A}$ ($13.43\text{ mA/count}$ ADC quantization resolution). |
 | **Step 4** | **Reference Appliance Validation** | **Walton WTF9M3 Fan Load** | Connect a Walton WTF9M3 table fan (manufacturer nameplate rated $60\text{ W}$) on Load 1. Multimeter reference reads $V \approx 226\text{ V}, I \approx 0.28\text{ A}$, yielding calculated apparent power $S = 63.28\text{ VA}$ ($\pm 29.5\text{ count}$ peak ADC excursion; operating PF is unmeasured). |
 
@@ -196,7 +196,7 @@ Follow these 4 steps in order on the dashboard (`Live Operations -> Remote Senso
 | **Wi-Fi HTTPS Cloudflare Tunnel & Dual-Core Ingest** | Implemented (`firmware.ino`) | **VERIFIED** (Reliable remote telemetry & status dispatch) |
 | **NVS Flash Calibration Persistence** | Implemented (`electricity_meter.cpp`) | **VERIFIED** (Survives reboot, restored from `"hems_cal"`) |
 | **Zero-Offset Calibration (Stage 1)** | Implemented (`CAL_ZERO`) | **VERIFIED [MEASURED]** ($V_{\text{zero}} = 2539.65$, $I_{\text{zero}} = 2537.18$ counts) |
-| **ZMPT101B True-RMS Voltage Calibration (Stage 2)** | Implemented (`SET_VCAL`) | **VERIFIED [CALIBRATED & VALIDATED]** ($K_V = 0.619060$, $V_{\text{RMS}} = 228.16\text{ V}$; $1.40\%$ error vs $225\text{V}$ ref, $0.96\%$ vs $226\text{V}$ obs) |
+| **ZMPT101B True-RMS Voltage Calibration (Stage 2)** | Implemented (`SET_VCAL`) | **VERIFIED [CALIBRATED AGAINST DMM REFERENCE; CROSS-SESSION COMPARISON RECORDED]** ($K_V = 0.619060$, $V_{\text{RMS}} = 228.16\text{ V}$; $1.40\%$ cal offset vs $225\text{V}$ ref, $0.96\%$ cross-session delta vs $226\text{V}$ obs) |
 | **ACS712 Current & Load Reference (Stage 3/4)** | Implemented (`SET_SENS`) | **VERIFIED [LOAD REF MEASURED / SENSOR REFINEMENT PENDING]** (Walton WTF9M3 fan: $60\text{W}$ rated, $226\text{V}$, $0.28\text{A}$, $S = 63.28\text{ VA}$, PF unmeasured) |
 
 ---
