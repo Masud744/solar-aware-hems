@@ -152,34 +152,33 @@ Calibration can be performed **remotely via the browser dashboard** or locally v
 
 1. **Auto Zero-Offset Calibration (`CAL_ZERO`):**
    - When triggered, Core 1 checks if any relay is energized. If loads are active, it **automatically commands all loads to OFF (`relays.allOff()`)** and delays 400 ms to guarantee a true $I = 0.000\text{ A}$ no-load condition before taking the 3-second ADC sample burst.
-   - Calculates quiescent DC bias for ZMPT101B ($V_{\text{zero}} \approx 2048$) and ACS712 ($I_{\text{zero}} \approx 1536$).
+   - Calculates quiescent DC bias for ZMPT101B ($V_{\text{zero}} = 2539.65\text{ counts} \approx 2.046\text{ V}$) and ACS712 ($I_{\text{zero}} = 2537.18\text{ counts} \approx 2.044\text{ V}$).
 2. **Voltage Scaling Calibration (`SET_VCAL`):**
-   - The user inputs the reference True-RMS voltage measured with a multimeter (e.g. $227.5\text{ V}$). The dashboard/firmware computes $K_V = \frac{V_{\text{multimeter}}}{V_{\text{raw\_rms\_swing}}}$ and sets the multiplier.
+   - The user inputs the reference True-RMS voltage measured with a multimeter at the bench ($\sim 226.0\text{ V}$). The dashboard/firmware computes $K_V = \frac{V_{\text{multimeter}}}{V_{\text{raw\_rms\_swing}}}$ and sets the multiplier ($K_V = 0.619060\text{ V/count}$).
 3. **ACS712 Physical Variant Configuration (`SET_SENS`):**
    - Allows selecting the physical variant rating:
      - **ACS712-05B:** $185\text{ mV/A}$ ($0.185\text{ V/A}$)
-     - **ACS712-20A:** $100\text{ mV/A}$ ($0.100\text{ V/A}$)
+     - **ACS712-20A (Selected):** $100\text{ mV/A}$ ($0.100\text{ V/A}$) $\rightarrow$ Effective sensitivity at ESP32 pin with $10\text{k}\Omega / 15\text{k}\Omega$ divider is $60.0\text{ mV/A}$ ($13.43\text{ mA/count}$ quantization).
      - **ACS712-30A:** $66\text{ mV/A}$ ($0.066\text{ V/A}$)
-     - Or custom sensitivity for other Hall-effect variants.
 
 ### C. NVS Flash Persistence Behavior:
 - **Namespace:** `"hems_cal"`
 - **Persisted Keys:** `v_zero` (float), `i_zero` (float), `v_cal` (float), `i_sens` (float), `calibrated` (bool).
-- **Reboot Behavior:** On boot, `ElectricityMeter::begin()` checks NVS flash. If calibrated, it automatically restores calibrated parameters and sets `cal_status = "CALIBRATED"`. If no NVS record exists, it loads safe default placeholders and marks `cal_status = "UNCALIBRATED"`.
+- **Reboot Behavior:** On boot, `ElectricityMeter::begin()` checks NVS flash. If calibrated, it automatically restores calibrated parameters and sets `cal_status = "CALIBRATED"` (or `"VOLTAGE_CALIBRATED"` / `"FULLY_CALIBRATED"`). If no NVS record exists, it loads safe default placeholders and marks `cal_status = "UNCALIBRATED"`.
 - **Reset Command (`RESET_CAL`):** Clears the `"hems_cal"` NVS namespace and restores uncalibrated defaults.
 
 ---
 
 ## 7. Step-by-Step Bench Calibration Workflow (For Assembled Hardware)
 
-Follow these 4 steps in order on the dashboard (`Live Operations -> Remote Sensor Calibration` panel):
+Follow these 4 steps in order on the dashboard (`Live Operations -> Remote Sensor Calibration` panel) or Serial CLI:
 
-| Step | Operation | Condition Required | Physical Action |
+| Step | Operation | Condition Required | Physical Action & Empirical Basis |
 |---|---|---|---|
-| **Step 1** | **`CAL_ZERO` (Zero-Offset)** | **No-Load Condition** ($I = 0\text{ A}$) | Click **"Run 3s Zero-Offset Calibration"**. The system automatically forces all 4 relays to `OFF`. The ESP32 measures the quiescent zero-current and zero-voltage bias levels for 3000 ms and persists them to NVS. |
-| **Step 2** | **`SET_VCAL` (Voltage Scaling)** | **Live 230V Mains Reference** | Measure true AC mains voltage with a calibrated True-RMS Multimeter at the wall socket (e.g. $226.5\text{ V}$). Enter this value in the **Step 2** field and click **"Apply"**. The calibrated $K_V$ is saved to NVS. |
-| **Step 3** | **`SET_SENS` (Sensor Variant)** | **Sensor Identification** | Check the silkscreen / part number on your physical ACS712 module (e.g. `ACS712ELCTR-20A-T`). Click the matching button (**5A**, **20A**, or **30A**), or enter custom $\text{V/A}$, and click **"Set"**. |
-| **Step 4** | **Known-Load Verification** | **Known Reference Load** | Turn ON a single known appliance (e.g. 60W incandescent bulb or 500W heater) on Load 1. Enter the rated reference wattage in **Step 4**. The dashboard computes Error $\% = \frac{\|P_{\text{ESP32}} - P_{\text{Ref}}\|}{P_{\text{Ref}}} \times 100\%$. Verify that Error $< 10\%$. |
+| **Step 1** | **`CAL_ZERO` (Zero-Offset)** | **No-Load Condition** ($I = 0\text{ A}$) | Click **"Run 3s Zero-Offset Calibration"**. The system automatically forces all 4 relays to `OFF`. The ESP32 measures the quiescent zero-current and zero-voltage bias levels for 3000 ms ($V_{\text{zero}} = 2539.65$, $I_{\text{zero}} = 2537.18$) and persists them to NVS. |
+| **Step 2** | **`SET_VCAL` (Voltage Scaling)** | **Live 230V Mains Reference** | Measure true AC mains voltage with a calibrated True-RMS Multimeter at the wall socket ($V_{\text{ref}} = 225.00\text{ V}$). Apply calibrated factor ($K_V = 0.619060$) to NVS. Live telemetry reads $228.16\text{ V}$ ($1.40\%$ error vs $225.00\text{ V}$ calibration reference; $0.96\%$ error vs later $\approx 226\text{ V}$ validation observation). |
+| **Step 3** | **`SET_SENS` (Sensor Variant)** | **Sensor Identification** | Confirm physical ACS712-20A module ($100\text{ mV/A}$). With $10\text{k}\Omega / 15\text{k}\Omega$ divider ($\alpha = 0.600$), effective pin sensitivity is $60.0\text{ mV/A}$ ($13.43\text{ mA/count}$ ADC quantization resolution). |
+| **Step 4** | **Reference Appliance Validation** | **Walton WTF9M3 Fan Load** | Connect a Walton WTF9M3 table fan (manufacturer nameplate rated $60\text{ W}$) on Load 1. Multimeter reference reads $V \approx 226\text{ V}, I \approx 0.28\text{ A}$, yielding calculated apparent power $S = 63.28\text{ VA}$ ($\pm 29.5\text{ count}$ peak ADC excursion; operating PF is unmeasured). |
 
 ---
 
@@ -196,9 +195,9 @@ Follow these 4 steps in order on the dashboard (`Live Operations -> Remote Senso
 | **DHT22 Temperature & Humidity (GPIO 4)** | Implemented (`firmware.ino`) | **VERIFIED** (Live readings: $32.5^{\circ}\text{C}$, $83.4\%$ humidity) |
 | **Wi-Fi HTTPS Cloudflare Tunnel & Dual-Core Ingest** | Implemented (`firmware.ino`) | **VERIFIED** (Reliable remote telemetry & status dispatch) |
 | **NVS Flash Calibration Persistence** | Implemented (`electricity_meter.cpp`) | **VERIFIED** (Survives reboot, restored from `"hems_cal"`) |
-| **Zero-Offset Calibration (Stage 1)** | Implemented (`CAL_ZERO`) | **VERIFIED** ($V_{\text{zero}} = 2539.65$, $I_{\text{zero}} = 2537.18$ counts) |
-| **ZMPT101B True-RMS Voltage Calibration (Stage 2)** | Implemented (`SET_VCAL`) | **VERIFIED** ($K_V = 0.619060$, $V_{\text{RMS}} = 228.16\text{ V}$ vs $225\text{V}$ ref) |
-| **ACS712 Current & Known-Load Calibration (Stage 3/4)** | Implemented (`SET_SENS`) | **PARTIALLY VERIFIED / PENDING PHYSICAL KNOWN-LOAD BENCH TEST** (System in `VOLTAGE_CALIBRATED` state) |
+| **Zero-Offset Calibration (Stage 1)** | Implemented (`CAL_ZERO`) | **VERIFIED [MEASURED]** ($V_{\text{zero}} = 2539.65$, $I_{\text{zero}} = 2537.18$ counts) |
+| **ZMPT101B True-RMS Voltage Calibration (Stage 2)** | Implemented (`SET_VCAL`) | **VERIFIED [CALIBRATED & VALIDATED]** ($K_V = 0.619060$, $V_{\text{RMS}} = 228.16\text{ V}$; $1.40\%$ error vs $225\text{V}$ ref, $0.96\%$ vs $226\text{V}$ obs) |
+| **ACS712 Current & Load Reference (Stage 3/4)** | Implemented (`SET_SENS`) | **VERIFIED [LOAD REF MEASURED / SENSOR REFINEMENT PENDING]** (Walton WTF9M3 fan: $60\text{W}$ rated, $226\text{V}$, $0.28\text{A}$, $S = 63.28\text{ VA}$, PF unmeasured) |
 
 ---
 

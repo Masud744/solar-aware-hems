@@ -173,11 +173,26 @@ Ingest ESP32 sensor reading.
 ```json
 {
   "device_id": "esp32_main",
-  "ts": "2026-08-21T12:00:00",
-  "voltage_v": 220.5,
-  "current_a": 4.2,
-  "power_w": 925.0,
-  "temperature_c": 31.5
+  "ts": "2026-08-25T14:30:00+06:00",
+  "voltage_v": 228.16,
+  "current_a": 0.280,
+  "power_w": 59.80,
+  "power_factor": 0.948,
+  "energy_accum_kwh": 0.01420,
+  "temperature_c": 32.5,
+  "humidity_pct": 83.4,
+  "cal_status": "VOLTAGE_CALIBRATED",
+  "v_zero_offset": 2539.65,
+  "i_zero_offset": 2537.18,
+  "v_cal_factor": 0.619060,
+  "i_sensitivity": 0.1000,
+  "relay_commanded_state": {
+    "load_1": {"name": "Load 1", "desired_source": "grid", "applied_source": "grid"},
+    "load_2": {"name": "Load 2", "desired_source": "solar", "applied_source": "solar"},
+    "load_3": {"name": "Load 3", "desired_source": "solar", "applied_source": "solar"},
+    "load_4": {"name": "Load 4", "desired_source": "grid", "applied_source": "grid"}
+  },
+  "mismatch_suspected": false
 }
 ```
 

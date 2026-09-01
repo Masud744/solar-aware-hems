@@ -14,8 +14,9 @@
  *    contacts or relay mechanical failures.
  * 3. The 4 downstream manual AC switches are purely mechanical cutoff switches
  *    with NO connection and NO sensing feedback to ESP32.
- * 4. Calibration constants are placeholder defaults. Real bench calibration is
- *    PENDING HARDWARE CALIBRATION.
+ * 4. Calibration constants defined below serve as uncalibrated fallback defaults.
+ *    Calibrated runtime constants (V_zero = 2539.65, I_zero = 2537.18, V_cal = 0.619060)
+ *    are persisted in ESP32 NVS flash ("hems_cal") and restored on boot.
  */
 
 #ifndef CONFIG_H
