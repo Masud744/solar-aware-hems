@@ -68,6 +68,8 @@ def compute_decision(
     sigma_load: float,
     device_power_kw: float,
     k: float,
+    is_stale: bool = False,
+    cached_at: object = None,
 ) -> DecisionResult:
     """Compute ALLOW/DENY decision per §8.1 (instantaneous check).
 
@@ -78,6 +80,8 @@ def compute_decision(
         sigma_load: Load forecast uncertainty (kW) — from bucketed sigma
         device_power_kw: Rated power of the requested device (kW)
         k: Safety multiplier (default 1.0 from Phase 4)
+        is_stale: Whether the underlying weather forecast features are from a stale cache
+        cached_at: Timestamp when the stale forecast was originally fetched
 
     Returns:
         DecisionResult with intermediate values and decision
@@ -86,8 +90,22 @@ def compute_decision(
     conservative_load = predicted_load_kw + k * sigma_load
     safe_surplus = safe_solar - conservative_load
 
-    # §8.1: Safe Surplus >= Device Power → ALLOW (note: >= not >)
-    if safe_surplus >= device_power_kw:
+    # Stale-Aware Admission Policy:
+    # If the underlying forecast is stale, numerical UQ/safe-surplus calculations
+    # are preserved for advisory/dashboard display, but automated solar admission
+    # authority is unconditionally suspended (final authoritative decision is DENY).
+    if is_stale:
+        decision = "DENY"
+        cached_str = ""
+        if cached_at:
+            ts_str = cached_at.isoformat() if hasattr(cached_at, "isoformat") else str(cached_at)
+            cached_str = f" (cached at {ts_str})"
+        reason = (
+            f"DENY: Forecast features are stale{cached_str}. "
+            f"Automated solar admission authority is suspended."
+        )
+    elif safe_surplus >= device_power_kw:
+        # §8.1: Safe Surplus >= Device Power → ALLOW (note: >= not >)
         decision = "ALLOW"
         reason = (
             f"Safe surplus ({safe_surplus:.3f} kW) >= device power "
@@ -133,6 +151,13 @@ def compute_duration_aware_decision(
         i for i, r in enumerate(hourly_results)
         if r.safe_surplus == min_surplus
     )
+
+    # Stale-Aware Admission Policy:
+    # If any hour in the duration has its solar admission authority suspended due to
+    # stale forecast features, the entire multi-hour run must be DENIED.
+    for i, r in enumerate(hourly_results):
+        if r.decision == "DENY" and "stale" in r.reason.lower():
+            return "DENY", f"Duration-aware check failed at hour +{i}: {r.reason}", min_surplus
 
     if min_surplus >= device_power_kw:
         decision = "ALLOW"

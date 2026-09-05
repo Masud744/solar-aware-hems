@@ -221,3 +221,74 @@ class TestSigmaBuckets:
         sigma, name = load_sigma_bucket(18)
         assert sigma == approx(0.6075, abs=1e-4)
         assert "Evening" in name
+
+
+class TestStaleAwareAdmissionPolicy:
+    """Verify the Stale-Aware Admission Policy at the decision engine level."""
+
+    def test_stale_forecast_with_positive_safe_surplus_returns_deny(self):
+        """Even with large positive surplus (e.g. 0.9035 kW vs 0.2 kW device), stale forecast forces DENY."""
+        result = compute_decision(
+            predicted_solar_kw=2.0,
+            sigma_solar=0.0851,
+            predicted_load_kw=0.5,
+            sigma_load=0.5114,
+            device_power_kw=0.2,
+            k=1.0,
+            is_stale=True,
+            cached_at="2026-03-05T12:00:00",
+        )
+        assert result.safe_solar == approx(1.9149, abs=1e-4)
+        assert result.conservative_load == approx(1.0114, abs=1e-4)
+        assert result.safe_surplus == approx(0.9035, abs=1e-4)
+        assert result.decision == "DENY"
+        assert "Automated solar admission authority is suspended" in result.reason
+        assert "cached at 2026-03-05T12:00:00" in result.reason
+
+    def test_fresh_forecast_with_same_numbers_returns_allow(self):
+        """Under identical numerical conditions, fresh forecast (is_stale=False) preserves ALLOW."""
+        result = compute_decision(
+            predicted_solar_kw=2.0,
+            sigma_solar=0.0851,
+            predicted_load_kw=0.5,
+            sigma_load=0.5114,
+            device_power_kw=0.2,
+            k=1.0,
+            is_stale=False,
+        )
+        assert result.safe_solar == approx(1.9149, abs=1e-4)
+        assert result.conservative_load == approx(1.0114, abs=1e-4)
+        assert result.safe_surplus == approx(0.9035, abs=1e-4)
+        assert result.decision == "ALLOW"
+        assert "Safe surplus (0.903 kW) >= device power (0.200 kW)" in result.reason
+
+    def test_duration_aware_denies_if_any_hour_is_stale(self):
+        """Duration-aware check must DENY if any hour in the run was denied due to staleness."""
+        r0 = compute_decision(
+            predicted_solar_kw=2.5,
+            sigma_solar=0.0851,
+            predicted_load_kw=0.5,
+            sigma_load=0.5114,
+            device_power_kw=0.3,
+            k=1.0,
+            is_stale=False,
+        )
+        assert r0.decision == "ALLOW"
+
+        r1 = compute_decision(
+            predicted_solar_kw=2.5,
+            sigma_solar=0.0851,
+            predicted_load_kw=0.5,
+            sigma_load=0.5114,
+            device_power_kw=0.3,
+            k=1.0,
+            is_stale=True,
+            cached_at="2026-03-05T12:00:00",
+        )
+        assert r1.decision == "DENY"
+
+        decision, reason, min_surplus = compute_duration_aware_decision([r0, r1], device_power_kw=0.3)
+        assert decision == "DENY"
+        assert "Duration-aware check failed at hour +1" in reason
+        assert "Automated solar admission authority is suspended" in reason
+

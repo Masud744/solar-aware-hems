@@ -142,6 +142,8 @@ export interface DeviceCheckResponse {
   feature_provenance?: Record<string, any>;
   weather_source: string;
   t2m_disclosure: T2MDisclosure;
+  is_stale?: boolean;
+  cached_at?: string | null;
 }
 
 // ── Schedule Recommend ───────────────────────────────────────────
@@ -154,6 +156,7 @@ export interface HourlySlot {
   predicted_load_kw: number;
   conservative_load_kw: number;
   history_mode?: 'real_history' | 'benchmark_profile_fallback';
+  is_stale?: boolean;
 }
 
 export interface ScheduleRecommendResponse {

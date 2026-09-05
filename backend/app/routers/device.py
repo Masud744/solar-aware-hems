@@ -84,6 +84,8 @@ async def device_check(req: DeviceCheckRequest):
                 sigma_load=sigma_load,
                 device_power_kw=req.rated_power_kw,
                 k=k,
+                is_stale=wx.get("is_stale", False),
+                cached_at=wx.get("cached_at"),
             )
 
             final_decision = result.decision
@@ -114,6 +116,8 @@ async def device_check(req: DeviceCheckRequest):
                     sigma_load=sigma_load,
                     device_power_kw=req.rated_power_kw,
                     k=k,
+                    is_stale=wx.get("is_stale", False),
+                    cached_at=wx.get("cached_at"),
                 )
                 hourly_results.append(result_h)
 
@@ -184,7 +188,10 @@ async def device_check(req: DeviceCheckRequest):
         reason=final_reason,
         history_mode=first_provenance.get("mode", "benchmark_profile_fallback") if first_provenance else "benchmark_profile_fallback",
         feature_provenance=first_provenance,
+        weather_source=wx.get("weather_source", "Open-Meteo forecast API"),
         t2m_disclosure=weather.get_t2m_disclosure(),
+        is_stale=wx.get("is_stale", False),
+        cached_at=wx.get("cached_at"),
     )
 
 
@@ -224,7 +231,7 @@ async def schedule_recommend(req: ScheduleRecommendRequest):
         try:
             if n_hours == 1:
                 (solar_pred, load_pred, sigma_solar, sigma_load,
-                 _, _, _, provenance) = await _predict_at_hour(
+                 _, _, wx, provenance) = await _predict_at_hour(
                     current,
                     predicted_loads=recursive_load_cache if recursive_load_cache else None,
                 )
@@ -236,6 +243,8 @@ async def schedule_recommend(req: ScheduleRecommendRequest):
                     sigma_load=sigma_load,
                     device_power_kw=req.rated_power_kw,
                     k=k,
+                    is_stale=wx.get("is_stale", False),
+                    cached_at=wx.get("cached_at"),
                 )
                 slot_surplus = result.safe_surplus
                 slot_decision = result.decision
@@ -253,14 +262,24 @@ async def schedule_recommend(req: ScheduleRecommendRequest):
                 first_solar = first_load = 0.0
                 first_sigma_s = first_sigma_l = 0.0
                 first_mode = "real_history"
+                first_wx = {}
 
                 for h in range(n_hours):
                     hour_t = current + timedelta(hours=h)
-                    (sp_h, lp_h, ss_h, sl_h, _, _, _, prov_h) = await _predict_at_hour(
+                    (sp_h, lp_h, ss_h, sl_h, _, _, wx_h, prov_h) = await _predict_at_hour(
                         hour_t,
                         predicted_loads=step_predicted_loads if step_predicted_loads else None,
                     )
-                    r = decision_engine.compute_decision(sp_h, ss_h, lp_h, sl_h, req.rated_power_kw, k)
+                    r = decision_engine.compute_decision(
+                        predicted_solar_kw=sp_h,
+                        sigma_solar=ss_h,
+                        predicted_load_kw=lp_h,
+                        sigma_load=sl_h,
+                        device_power_kw=req.rated_power_kw,
+                        k=k,
+                        is_stale=wx_h.get("is_stale", False),
+                        cached_at=wx_h.get("cached_at"),
+                    )
                     hourly_results.append(r)
                     step_predicted_loads[hour_t.isoformat()] = lp_h
 
@@ -270,6 +289,7 @@ async def schedule_recommend(req: ScheduleRecommendRequest):
                         first_sigma_s = ss_h
                         first_sigma_l = sl_h
                         first_mode = prov_h.get("mode", "benchmark_profile_fallback")
+                        first_wx = wx_h
 
                 slot_decision, _, slot_surplus = (
                     decision_engine.compute_duration_aware_decision(
@@ -295,6 +315,7 @@ async def schedule_recommend(req: ScheduleRecommendRequest):
                 predicted_load_kw=round(lp, 6),
                 conservative_load_kw=round(conservative_load, 6),
                 history_mode=slot_mode,
+                is_stale=wx.get("is_stale", False) if n_hours == 1 else first_wx.get("is_stale", False),
             )
             slots.append(slot)
 

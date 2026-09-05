@@ -102,6 +102,8 @@ class DeviceCheckResponse(BaseModel):
     feature_provenance: Optional[dict] = None
     weather_source: str = "Open-Meteo forecast API"
     t2m_disclosure: dict
+    is_stale: bool = False
+    cached_at: Optional[datetime] = None
 
 
 # ── Schedule recommend endpoint ────────────────────────────────────────
@@ -128,6 +130,7 @@ class HourlySlot(BaseModel):
     predicted_load_kw: float
     conservative_load_kw: float
     history_mode: str = "benchmark_profile_fallback"
+    is_stale: bool = False
 
 
 class ScheduleRecommendResponse(BaseModel):
