@@ -321,6 +321,9 @@ class EnergySummaryResponse(BaseModel):
     this_month: MonthlyEnergyResponse
     tariff_rate: float = 7.50
     tariff_currency: str = "BDT"
+    available_months: Optional[list[str]] = None
+    is_latest_active_month: Optional[bool] = False
+
 
 
 # ── AI Assistant Chat Schemas ─────────────────────────────────────────

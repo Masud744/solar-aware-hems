@@ -186,8 +186,11 @@ export function postAction(deviceRequestId: number, action: 'accept' | 'reject' 
 
 // ── Persistent Energy & Cost Accounting ───────────────────────────
 
-export function fetchEnergySummary(tariffRate = 7.50) {
-  return request<EnergySummaryResponse>(`/energy/summary?tariff_rate=${tariffRate}`);
+export function fetchEnergySummary(tariffRate = 7.50, month?: string, date?: string) {
+  let query = `tariff_rate=${tariffRate}`;
+  if (month) query += `&month=${encodeURIComponent(month)}`;
+  if (date) query += `&date=${encodeURIComponent(date)}`;
+  return request<EnergySummaryResponse>(`/energy/summary?${query}`);
 }
 
 export function fetchDailyEnergy(date?: string, tariffRate = 7.50) {

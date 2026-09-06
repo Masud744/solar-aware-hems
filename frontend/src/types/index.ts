@@ -272,6 +272,8 @@ export interface EnergySummaryResponse {
   this_month: MonthlyEnergyRecord;
   tariff_rate: number;
   tariff_currency: string;
+  available_months?: string[];
+  is_latest_active_month?: boolean;
 }
 
 export interface SolarEstimateRequest {

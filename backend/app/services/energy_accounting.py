@@ -239,6 +239,36 @@ def get_daily_energy_accounting(date_str: Optional[str] = None, tariff_rate: flo
     }
 
 
+def get_available_accounting_months() -> List[str]:
+    """Return a descending list of 'YYYY-MM' strings that contain telemetry or estimates.
+    
+    Always includes the current Asia/Dhaka calendar month.
+    """
+    dhaka_now = get_dhaka_now()
+    current_m = dhaka_now.strftime("%Y-%m")
+    months = {current_m}
+    try:
+        sb = get_supabase()
+        # 1. Inspect recent solar estimates
+        res_est = sb.table("user_solar_estimates").select("date").order("date", desc=True).limit(50).execute()
+        if res_est and res_est.data:
+            for r in res_est.data:
+                if r.get("date"):
+                    months.add(str(r["date"])[:7])
+                    
+        # 2. Inspect earliest and latest esp32_main telemetry bounds
+        res_first = sb.table("sensor_readings").select("ts").eq("device_id", "esp32_main").order("ts", desc=False).limit(1).execute()
+        res_last = sb.table("sensor_readings").select("ts").eq("device_id", "esp32_main").order("ts", desc=True).limit(1).execute()
+        if res_first and res_first.data and res_last and res_last.data:
+            t1 = datetime.fromisoformat(res_first.data[0]["ts"].replace("Z", "+00:00")).astimezone(DHAKA_TZ)
+            t2 = datetime.fromisoformat(res_last.data[0]["ts"].replace("Z", "+00:00")).astimezone(DHAKA_TZ)
+            months.add(t1.strftime("%Y-%m"))
+            months.add(t2.strftime("%Y-%m"))
+    except Exception:
+        pass
+    return sorted(list(months), reverse=True)
+
+
 def get_monthly_energy_accounting(month_str: Optional[str] = None, tariff_rate: float = DEFAULT_TARIFF_BDT_PER_KWH) -> Dict[str, Any]:
     """Get aggregated monthly energy accounting for 'YYYY-MM' via single batch query."""
     if not month_str:

@@ -136,3 +136,27 @@ def test_solar_estimate_post_validation():
         "estimated_solar_kwh": -1.5,
     })
     assert resp.status_code == 422
+
+
+def test_energy_summary_with_explicit_month():
+    """Verify GET /energy/summary?month=2026-08 queries the specified month."""
+    mock_supabase = MagicMock()
+    mock_supabase.table().select().eq().gte().lt().order().range().execute.return_value = MagicMock(
+        data=[
+            {"ts": "2026-08-28T06:00:00Z", "power_w": 500.0},
+        ]
+    )
+    mock_supabase.table().select().order().limit().execute.return_value = MagicMock(
+        data=[
+            {"date": "2026-08-28", "estimated_solar_kwh": 3.5, "notes": "Sunny day"}
+        ]
+    )
+
+    with patch("app.services.energy_accounting.get_supabase", return_value=mock_supabase):
+        resp = client.get("/energy/summary?month=2026-08")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["month"] == "2026-08"
+        assert "available_months" in data
+        assert isinstance(data["available_months"], list)
+
