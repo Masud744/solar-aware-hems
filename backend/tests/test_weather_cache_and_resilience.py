@@ -337,6 +337,107 @@ class TestWeatherCacheAndResilience(unittest.IsolatedAsyncioTestCase):
 
         print("PASS: T9 Both Upstream and Cache Down -> Clean 503 verified.")
 
+    # ── T10: Cooldown with Stale Cache Available (Polling Storm Prevention) ──
+    async def test_t10_stale_cache_under_429_activates_cooldown_blocking_upstream_polling(self):
+        """T10: Proves that when stale cached data exists, a 429 upstream failure activates cooldown
+        such that repeated rapid requests serve stale cache immediately with 0 additional upstream calls."""
+        now = datetime.now()
+        target_time = now.replace(minute=0, second=0, microsecond=0)
+        base_time = (now - timedelta(hours=25)).replace(minute=0, second=0, microsecond=0)
+        valid_7d_forecast = self._generate_valid_forecast(base_time, days=7)
+
+        # Seed in-memory cache with 25h-old valid forecast
+        weather._cache["data"] = valid_7d_forecast
+        weather._cache["fetched_at"] = now - timedelta(hours=25)
+        weather._cache["negative_ttl_seconds"] = 60
+        weather._cache["cooldown_seconds"] = None
+        weather._cache["last_error_at"] = None
+
+        fetch_call_count = 0
+        should_recover = False
+
+        async def mock_failing_fetch():
+            nonlocal fetch_call_count
+            fetch_call_count += 1
+            if not should_recover:
+                raise weather.WeatherForecastError("Open-Meteo HTTP 429 Too Many Requests", status_code=429)
+            # Recovery: return fresh forecast
+            return self._generate_valid_forecast(now.replace(minute=0, second=0, microsecond=0), days=7)
+
+        with patch("app.services.weather._fetch_forecast", side_effect=mock_failing_fetch):
+            # Request 1: cache expired, calls upstream, fails with 429, sets 60s cooldown, serves stale
+            res1 = await weather.get_forecast_at(target_time)
+            self.assertEqual(fetch_call_count, 1)
+            self.assertTrue(res1["is_stale"])
+            self.assertEqual(res1["data_source"], "cached_persisted_forecast")
+            self.assertIsNotNone(weather._cache["last_error_at"])
+            self.assertEqual(weather._cache["cooldown_seconds"], 60)
+
+            # Requests 2 through 10 (simulating frontend polling every 5 seconds):
+            # Cooldown is active -> MUST serve stale immediately without calling upstream!
+            for _ in range(9):
+                res = await weather.get_forecast_at(target_time)
+                self.assertTrue(res["is_stale"])
+                self.assertEqual(res["data_source"], "cached_persisted_forecast")
+
+            # CRITICAL VERIFICATION: Upstream was called ONLY ONCE across 10 requests!
+            self.assertEqual(fetch_call_count, 1)
+
+            # BOUNDARY CHECK: Advance time beyond 60s cooldown window
+            weather._cache["last_error_at"] = datetime.now() - timedelta(seconds=65)
+            should_recover = True
+
+            # Request 11: Cooldown expired -> attempts fresh fetch, recovers successfully!
+            res_recovered = await weather.get_forecast_at(target_time)
+            self.assertEqual(fetch_call_count, 2)
+            self.assertFalse(res_recovered["is_stale"])
+            self.assertEqual(res_recovered["data_source"], "live_upstream_forecast")
+            self.assertIsNone(weather._cache["cooldown_seconds"])
+
+        print("PASS: T10 Stale Cache Cooldown & Polling Storm Prevention verified.")
+
+    # ── T11: Retry-After Header Respected on 429 ──────────────────────
+    async def test_t11_retry_after_header_controls_cooldown_duration(self):
+        """T11: Proves that upstream Retry-After header sets cooldown duration and is respected."""
+        now = datetime.now()
+        target_time = now.replace(minute=0, second=0, microsecond=0)
+        base_time = (now - timedelta(hours=25)).replace(minute=0, second=0, microsecond=0)
+        valid_7d_forecast = self._generate_valid_forecast(base_time, days=7)
+
+        weather._cache["data"] = valid_7d_forecast
+        weather._cache["fetched_at"] = now - timedelta(hours=25)
+        weather._cache["cooldown_seconds"] = None
+        weather._cache["last_error_at"] = None
+
+        fetch_call_count = 0
+
+        async def mock_fetch_with_retry_after():
+            nonlocal fetch_call_count
+            fetch_call_count += 1
+            # HTTP 429 with Retry-After: 120
+            raise weather.WeatherForecastError("Open-Meteo HTTP 429", status_code=429, retry_after=120.0)
+
+        with patch("app.services.weather._fetch_forecast", side_effect=mock_fetch_with_retry_after):
+            res = await weather.get_forecast_at(target_time)
+            self.assertEqual(fetch_call_count, 1)
+            self.assertTrue(res["is_stale"])
+            # Cooldown should be exactly 120s from Retry-After
+            self.assertEqual(weather._cache["cooldown_seconds"], 120)
+
+            # At 65s (which would exceed default 60s), cooldown must STILL be active
+            weather._cache["last_error_at"] = datetime.now() - timedelta(seconds=65)
+            res_still_cooling = await weather.get_forecast_at(target_time)
+            self.assertEqual(fetch_call_count, 1)
+            self.assertTrue(res_still_cooling["is_stale"])
+
+            # At 125s (exceeding Retry-After 120s), cooldown expires and upstream is retried
+            weather._cache["last_error_at"] = datetime.now() - timedelta(seconds=125)
+            res_retried = await weather.get_forecast_at(target_time)
+            self.assertEqual(fetch_call_count, 2)
+            self.assertTrue(res_retried["is_stale"])
+
+        print("PASS: T11 Retry-After Header Cooldown Duration verified.")
+
     # ── Admission Policy Tests (Tests 1 - 7) ──────────────────────────
 
     # Test 1: Stale forecast + positive safe surplus -> DENY

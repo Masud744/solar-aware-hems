@@ -28,19 +28,25 @@ def _get_fetch_lock() -> asyncio.Lock:
 
 # In-memory cache: stores the last fetched forecast
 _cache: dict = {
-    "fetched_at": None,          # datetime of last successful fetch
-    "data": None,                # parsed hourly forecast dict
-    "cache_ttl_seconds": 3600,   # 1 hour cache for successful responses
-    "negative_ttl_seconds": 60,  # 60s backoff after a failed upstream fetch
-    "last_error": None,          # string description of last fetch error
-    "last_error_at": None,       # datetime of last fetch error
-    "is_stale": False,           # True if serving cached data after a refresh failure
+    "fetched_at": None,                  # datetime of last successful fetch
+    "data": None,                        # parsed hourly forecast dict
+    "cache_ttl_seconds": 3600,           # 1 hour cache for successful responses
+    "negative_ttl_seconds": 60,          # 60s backoff after non-429 upstream fetch errors
+    "rate_limit_cooldown_seconds": 300, # 300s (5m) backoff after HTTP 429 rate limit
+    "cooldown_until": None,              # datetime until which upstream calls are blocked
+    "last_error": None,                  # string description of last fetch error
+    "last_error_at": None,               # datetime of last fetch error
+    "is_stale": False,                   # True if serving cached data after a refresh failure
 }
 
 
 class WeatherForecastError(Exception):
     """Raised when Open-Meteo forecast retrieval fails."""
-    pass
+    def __init__(self, message: str, status_code: Optional[int] = None, retry_after: Optional[float] = None):
+        super().__init__(message)
+        self.status_code = status_code
+        self.retry_after = retry_after
+
 
 
 class ForecastHorizonError(Exception):
@@ -114,6 +120,55 @@ def validate_forecast_entry(entry: dict) -> bool:
     return True
 
 
+def _get_cooldown_until() -> Optional[datetime]:
+    """Return the datetime when upstream cooldown expires, or None."""
+    if _cache.get("last_error_at") is None or _cache.get("cooldown_seconds") is None:
+        return None
+    return _cache["last_error_at"] + timedelta(seconds=_cache["cooldown_seconds"])
+
+
+def _is_cooldown_active(now: datetime) -> bool:
+    """Check if upstream fetch cooldown is currently active.
+
+    A cooldown is active when a previous upstream fetch failed and the elapsed
+    time since last_error_at is less than cooldown_seconds (or negative_ttl_seconds).
+    """
+    err_at = _cache.get("last_error_at")
+    if err_at is None:
+        return False
+    e_at = err_at.replace(tzinfo=None) if err_at.tzinfo else err_at
+    n = now.replace(tzinfo=None) if now.tzinfo else now
+    cooldown_secs = _cache.get("cooldown_seconds") or _cache.get("negative_ttl_seconds", 60)
+    return (n - e_at).total_seconds() < cooldown_secs
+
+
+def _get_remaining_cooldown_seconds(now: datetime) -> int:
+    """Return remaining cooldown seconds, or 0 if inactive."""
+    if not _is_cooldown_active(now):
+        return 0
+    err_at = _cache["last_error_at"]
+    e_at = err_at.replace(tzinfo=None) if err_at.tzinfo else err_at
+    n = now.replace(tzinfo=None) if now.tzinfo else now
+    cooldown_secs = _cache.get("cooldown_seconds") or _cache.get("negative_ttl_seconds", 60)
+    return max(1, int(cooldown_secs - (n - e_at).total_seconds()))
+
+
+def _extract_cooldown_seconds(e: WeatherForecastError) -> int:
+    """Determine upstream cooldown duration based on error and Retry-After header.
+
+    Policy:
+    1. If the upstream HTTP response provided a 'Retry-After' header with a positive value,
+       respect it (bounded between 5s and 3600s).
+    2. Otherwise, enforce the configured negative TTL backoff window
+       (default: _cache['negative_ttl_seconds'] = 60s).
+    """
+    retry_after = getattr(e, "retry_after", None)
+    if retry_after is not None and retry_after > 0:
+        return int(min(3600.0, max(5.0, retry_after)))
+    return _cache.get("negative_ttl_seconds", 60)
+
+
+
 async def _fetch_forecast() -> dict:
     """Fetch hourly forecast from Open-Meteo for Kaliakair, BD.
 
@@ -147,17 +202,19 @@ async def _fetch_forecast() -> dict:
                 data = resp.json()
                 break
         except httpx.HTTPStatusError as e:
+            ra_header = e.response.headers.get("Retry-After")
+            retry_after = None
+            if ra_header:
+                try:
+                    retry_after = float(ra_header)
+                except (ValueError, TypeError):
+                    pass
+
             if e.response.status_code == 429 and attempt < max_retries:
                 # 1. Check for Retry-After header
                 wait_time = None
-                ra_header = e.response.headers.get("Retry-After")
-                if ra_header:
-                    try:
-                        ra_val = float(ra_header)
-                        if 0 < ra_val <= 5.0:
-                            wait_time = ra_val
-                    except (ValueError, TypeError):
-                        pass
+                if retry_after is not None and 0 < retry_after <= 5.0:
+                    wait_time = retry_after
 
                 # 2. Bounded exponential backoff with additive jitter (Attempt 0: ~1.1-1.4s, Attempt 1: ~2.1-2.4s, Cap: 4.0s)
                 if wait_time is None:
@@ -175,13 +232,17 @@ async def _fetch_forecast() -> dict:
             raise WeatherForecastError(
                 f"Weather forecast unavailable from Open-Meteo. "
                 f"Cannot generate prediction without forecast features. "
-                f"Error: {e}"
+                f"Error: {e}",
+                status_code=e.response.status_code,
+                retry_after=retry_after,
             )
         except httpx.HTTPError as e:
+            status_code = getattr(getattr(e, "response", None), "status_code", None)
             raise WeatherForecastError(
                 f"Weather forecast unavailable from Open-Meteo. "
                 f"Cannot generate prediction without forecast features. "
-                f"Error: {e}"
+                f"Error: {e}",
+                status_code=status_code,
             )
 
     if data is None:
@@ -346,48 +407,63 @@ async def get_forecast_at(target_time: datetime) -> dict:
 
     now = datetime.now()
 
-    # 1. Non-blocking check for fresh cache
+    # Fast path 1: Fresh in-memory cache (within 1-hour TTL)
+    # Fast path 2: Stale in-memory cache AND upstream cooldown is active
+    # In both cases, do not acquire lock and do not call upstream!
     if not _is_cache_fresh(now):
-        lock = _get_fetch_lock()
-        async with lock:
-            # Seed from database if memory cache is completely unpopulated
-            if _cache["data"] is None:
-                _load_persisted_cache()
+        # If cooldown is active and we already have cached forecast data,
+        # immediately bypass upstream and serve the stale forecast.
+        if _cache["data"] is not None and _is_cooldown_active(now):
+            pass  # Fast path: proceed directly to forecast extraction below
+        else:
+            lock = _get_fetch_lock()
+            async with lock:
+                # Seed from database if memory cache is completely unpopulated
+                if _cache["data"] is None:
+                    _load_persisted_cache()
 
-            # 2. Re-check under lock (double-checked locking pattern)
-            if not _is_cache_fresh(now):
-                # Check negative cache / failure backoff if cache is empty
-                if _cache["data"] is None and _cache["last_error_at"] is not None:
-                    elapsed_err = (now - _cache["last_error_at"]).total_seconds()
-                    if elapsed_err < _cache["negative_ttl_seconds"]:
-                        remaining = int(_cache["negative_ttl_seconds"] - elapsed_err)
-                        raise WeatherForecastError(
-                            f"Weather forecast temporarily unavailable (upstream backoff active, retry in "
-                            f"{remaining}s). Last error: {_cache['last_error']}"
-                        )
-
-                try:
-                    new_data = await _fetch_forecast()
-                    _cache["data"] = new_data
-                    _cache["fetched_at"] = now
-                    _cache["last_error"] = None
-                    _cache["last_error_at"] = None
-                    _cache["is_stale"] = False
-                    _save_persisted_cache(new_data, now)
-                except WeatherForecastError as e:
-                    _cache["last_error"] = str(e)
-                    _cache["last_error_at"] = now
-
-                    # If we have last-known-good data, preserve it and serve stale (NO 24H HARD DROP)
-                    if _cache["data"] is not None:
-                        _cache["is_stale"] = True
-                        logger.warning(
-                            "Open-Meteo refresh failed (%s). Serving last-known-good forecast from %s.",
-                            e,
-                            _cache["fetched_at"],
-                        )
+                # Re-check under lock (double-checked locking pattern)
+                if not _is_cache_fresh(now):
+                    # Check if cooldown is active (e.g. set by another concurrent coroutine)
+                    if _is_cooldown_active(now):
+                        if _cache["data"] is None:
+                            remaining = _get_remaining_cooldown_seconds(now)
+                            raise WeatherForecastError(
+                                f"Weather forecast temporarily unavailable (upstream backoff active, retry in "
+                                f"{remaining}s). Last error: {_cache['last_error']}"
+                            )
+                        # Else: we have cached data, bypass upstream fetch and serve stale
                     else:
-                        raise
+                        try:
+                            new_data = await _fetch_forecast()
+                            _cache["data"] = new_data
+                            _cache["fetched_at"] = now
+                            _cache["last_error"] = None
+                            _cache["last_error_at"] = None
+                            _cache["cooldown_seconds"] = None
+                            _cache["is_stale"] = False
+                            _save_persisted_cache(new_data, now)
+                        except WeatherForecastError as e:
+                            _cache["last_error"] = str(e)
+                            _cache["last_error_at"] = now
+                            cooldown_secs = _extract_cooldown_seconds(e)
+                            _cache["cooldown_seconds"] = cooldown_secs
+
+                            # If we have last-known-good data, preserve it and serve stale (NO 24H HARD DROP)
+                            if _cache["data"] is not None:
+                                _cache["is_stale"] = True
+                                c_until = _get_cooldown_until()
+                                c_until_str = c_until.strftime("%Y-%m-%d %H:%M:%S") if c_until else "unknown"
+                                logger.warning(
+                                    "Open-Meteo refresh failed (%s). Serving last-known-good forecast from %s. "
+                                    "Upstream cooldown active for %ds until %s.",
+                                    e,
+                                    _cache["fetched_at"],
+                                    cooldown_secs,
+                                    c_until_str,
+                                )
+                            else:
+                                raise
 
     forecast = _cache["data"]
     if forecast is None:
@@ -436,11 +512,17 @@ async def get_forecast_at(target_time: datetime) -> dict:
 def get_cache_diagnostics() -> dict:
     """Return cache diagnostics for observability and health checks."""
     now = datetime.now()
+    cooldown_until = _get_cooldown_until()
+    cooldown_active = _is_cooldown_active(now)
+    remaining_cooldown = _get_remaining_cooldown_seconds(now)
     return {
         "has_data": _cache["data"] is not None,
         "fetched_at": _cache["fetched_at"].isoformat() if _cache["fetched_at"] else None,
         "is_stale": _cache["is_stale"],
         "is_fresh": _is_cache_fresh(now),
+        "cooldown_active": cooldown_active,
+        "cooldown_remaining_seconds": remaining_cooldown,
+        "cooldown_until": cooldown_until.isoformat() if cooldown_until else None,
         "last_error": _cache["last_error"],
         "last_error_at": _cache["last_error_at"].isoformat() if _cache["last_error_at"] else None,
         "entry_count": len(_cache["data"]) if _cache["data"] else 0,
