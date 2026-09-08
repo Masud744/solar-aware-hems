@@ -588,7 +588,7 @@ class TestWeatherCacheAndResilience(unittest.IsolatedAsyncioTestCase):
     async def test_admission_7_stale_forecast_produces_valid_predictions_and_metadata(self):
         """Test 7: Proves stale forecast serves valid continuous predictions and metadata for advisory display."""
         now = datetime.now()
-        target_time = (now + timedelta(hours=2)).replace(minute=0, second=0, microsecond=0)
+        target_time = now.replace(hour=12, minute=0, second=0, microsecond=0)
         target_str = target_time.strftime("%Y-%m-%dT%H:%M")
         cached_time = now - timedelta(hours=27)
 

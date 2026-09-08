@@ -117,26 +117,43 @@ For each load $i \in \{1, 2, 3, 4\}$, the firmware maintains:
 
 ---
 
-## 5. Hardware Pinout Allocation (ESP32 30-Pin DevKit V1)
+## 5. Hardware Architecture, Power Distribution & Pinout Allocation (ESP32 30-Pin DevKit V1)
 
-| Peripheral / Channel | ESP32 GPIO | Pin Mode | Logic / Electrical Level | Hardware Destination / Notes |
+### A. Physical Prototype Power Distribution & Ground Architecture:
+```
+[230V AC Mains] ──► [7.5V AC-to-DC Adapter] ──► [PJ-102A DC Jack] ──► [Buck Converter (5V Regulated)]
+                                                                               │
+       ┌───────────────────────────────────────────────────────────────────────┴────────────────────────────────┐
+       ▼ (+5V Rail)                                                                                             ▼ (Common GND)
+ • ESP32 DevKit VIN / 5V input                                                            • Unified Common Ground shared by
+ • ACS712-20A VCC (Pin 1)                                                                   ESP32, ACS712, ZMPT101B, DHT22,
+ • ZMPT101B VCC                                                                             Relay modules, 10kΩ pull-downs,
+ • 2x 4-Channel Relay Modules (Board Power Terminals)                                       and 15kΩ divider resistor (R2).
+```
+
+> **ADC Reference Clarification:** `ADC_REF_VOLTAGE = 3.30f` is a nominal firmware scaling constant used in the ADC conversion model and is not an individually precision-calibrated ESP32 ADC reference voltage.
+
+### B. Hardware Pinout Allocation Table:
+
+| Peripheral / Channel | ESP32 GPIO | Pin Mode | Logic / Electrical Level | Hardware Destination / Evidence Status |
 |---|---|---|---|---|
-| **DHT22 Data** | **GPIO 4** | `INPUT` | Digital 1-Wire, 3.3V | External 10kΩ pull-up to 3.3V (**Verified**) |
-| **Grid Relay — Load 1** | **GPIO 16** | `OUTPUT` | Active-LOW (LOW=ON, HIGH=OFF) | Grid Board IN1 (**Verified**) |
-| **Grid Relay — Load 2** | **GPIO 17** | `OUTPUT` | Active-LOW (LOW=ON, HIGH=OFF) | Grid Board IN2 (**Verified**) |
-| **Grid Relay — Load 3** | **GPIO 18** | `OUTPUT` | Active-LOW (LOW=ON, HIGH=OFF) | Grid Board IN3 (**Verified**) |
-| **Grid Relay — Load 4** | **GPIO 19** | `OUTPUT` | Active-LOW (LOW=ON, HIGH=OFF) | Grid Board IN4 (**Verified**) |
-| **Solar Relay — Load 1** | **GPIO 21** | `OUTPUT` | Active-LOW (LOW=ON, HIGH=OFF) | Solar Board IN1 (**Verified**) |
-| **Solar Relay — Load 2** | **GPIO 22** | `OUTPUT` | Active-LOW (LOW=ON, HIGH=OFF) | Solar Board IN2 (**Verified**) |
-| **Solar Relay — Load 3** | **GPIO 23** | `OUTPUT` | Active-LOW (LOW=ON, HIGH=OFF) | Solar Board IN3 (**Verified**) |
-| **Solar Relay — Load 4** | **GPIO 13** | `OUTPUT` | Active-LOW (LOW=ON, HIGH=OFF) | Solar Board IN4 (**Verified — Reassigned from GPIO 25**) |
-| **Source Selector — Load 1** | **GPIO 26** | `INPUT_PULLDOWN` | 0V=GRID, 3.3V=SOLAR | 10kΩ pull-down to GND (**Verified**) |
-| **Source Selector — Load 2** | **GPIO 27** | `INPUT_PULLDOWN` | 0V=GRID, 3.3V=SOLAR | 10kΩ pull-down to GND (**Verified**) |
-| **Source Selector — Load 3** | **GPIO 32** | `INPUT_PULLDOWN` | 0V=GRID, 3.3V=SOLAR | 10kΩ pull-down to GND (**Verified**) |
-| **Source Selector — Load 4** | **GPIO 33** | `INPUT_PULLDOWN` | 0V=GRID, 3.3V=SOLAR | 10kΩ pull-down to GND (**Verified**) |
-| **ACS712 Current Sensor** | **GPIO 34** | `INPUT` (ADC1_6) | Analog (via 10k/15k divider) | Aggregate neutral return (**Pending Calibration**) |
-| **ZMPT101B Voltage Sensor** | **GPIO 35** | `INPUT` (ADC1_7) | Analog (0–3.3V) | Aggregate AC mains transformer (**Pending Calibration**) |
-| **Status LED** | **GPIO 2** | `OUTPUT` | Active-HIGH (3.3V = ON) | Onboard LED, Wi-Fi status indicator (**Verified**) |
+| **DHT22 Data** | **GPIO 4** | `INPUT` | Digital 1-Wire, 3.3V | External 10kΩ pull-up to 3.3V (`[PHYSICAL WIRING OBSERVED & MEASURED]`) |
+| **Grid Relay — Load 1** | **GPIO 16** | `OUTPUT` | Active-LOW (LOW=ON, HIGH=OFF) | Grid Board IN1 (`[PHYSICAL WIRING OBSERVED & MEASURED]`) |
+| **Grid Relay — Load 2** | **GPIO 17** | `OUTPUT` | Active-LOW (LOW=ON, HIGH=OFF) | Grid Board IN2 (`[PHYSICAL WIRING OBSERVED & MEASURED]`) |
+| **Grid Relay — Load 3** | **GPIO 18** | `OUTPUT` | Active-LOW (LOW=ON, HIGH=OFF) | Grid Board IN3 (`[PHYSICAL WIRING OBSERVED & MEASURED]`) |
+| **Grid Relay — Load 4** | **GPIO 19** | `OUTPUT` | Active-LOW (LOW=ON, HIGH=OFF) | Grid Board IN4 (`[PHYSICAL WIRING OBSERVED & MEASURED]`) |
+| **Solar Relay — Load 1** | **GPIO 21** | `OUTPUT` | Active-LOW (LOW=ON, HIGH=OFF) | Solar Board IN1 (`[PHYSICAL WIRING OBSERVED & MEASURED]`) |
+| **Solar Relay — Load 2** | **GPIO 22** | `OUTPUT` | Active-LOW (LOW=ON, HIGH=OFF) | Solar Board IN2 (`[PHYSICAL WIRING OBSERVED & MEASURED]`) |
+| **Solar Relay — Load 3** | **GPIO 23** | `OUTPUT` | Active-LOW (LOW=ON, HIGH=OFF) | Solar Board IN3 (`[PHYSICAL WIRING OBSERVED & MEASURED]`) |
+| **Solar Relay — Load 4** | **GPIO 13** | `OUTPUT` | Active-LOW (LOW=ON, HIGH=OFF) | Solar Board IN4 (`[PHYSICAL WIRING OBSERVED & MEASURED]`) |
+| **Source Selector — Load 1** | **GPIO 26** | `INPUT_PULLDOWN` | 0V=GRID, 3.3V=SOLAR | 10kΩ pull-down to GND (`[PHYSICAL WIRING OBSERVED & MEASURED]`) |
+| **Source Selector — Load 2** | **GPIO 27** | `INPUT_PULLDOWN` | 0V=GRID, 3.3V=SOLAR | 10kΩ pull-down to GND (`[PHYSICAL WIRING OBSERVED & MEASURED]`) |
+| **Source Selector — Load 3** | **GPIO 32** | `INPUT_PULLDOWN` | 0V=GRID, 3.3V=SOLAR | 10kΩ pull-down to GND (`[PHYSICAL WIRING OBSERVED & MEASURED]`) |
+| **Source Selector — Load 4** | **GPIO 33** | `INPUT_PULLDOWN` | 0V=GRID, 3.3V=SOLAR | 10kΩ pull-down to GND (`[PHYSICAL WIRING OBSERVED & MEASURED]`) |
+| **ACS712 Current Sensor** | **GPIO 34** | `INPUT` (ADC1_6) | Analog (via 10k/15k divider) | Aggregate neutral return (`[PHYSICAL WIRING OBSERVED & MEASURED]`) |
+| **ZMPT101B Voltage Sensor** | **GPIO 35** | `INPUT` (ADC1_7) | Analog (0–3.3V) | Aggregate AC mains transformer; physical connection verified, full output amplitude relative to ESP32 ADC-safe limits requires empirical verification (`[PHYSICAL WIRING OBSERVED / PENDING AMPLITUDE VERIFICATION]`) |
+| **Status LED** | **GPIO 2** | `OUTPUT` | Active-HIGH (3.3V = ON) | Onboard LED, Wi-Fi status indicator (`[PHYSICAL WIRING OBSERVED & MEASURED]`) |
+| **Reset (BOOT Button)** | **GPIO 0** | `INPUT_PULLUP` | Active-LOW (Hold 5s) | SmartProv captive-portal factory reset (`[PHYSICAL WIRING OBSERVED & MEASURED]`) |
 
 ---
 

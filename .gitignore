@@ -85,11 +85,15 @@ Thumbs.db
 
 # Paper & Manuscript Private Assets (Preserved locally, excluded from public repo)
 paper_assets/
+Project_Report/
+Project_Report_Writing_format/
+*.xlsx
 
 # Internal Agent Development Workflows & Drafts (Preserved locally, excluded from public repo)
 BUILD_PLAN.md
 AGENTS.md
 PROJECT_MASTER_CONTEXT.md
+AI_PROJECT_CONTEXT.md
 docs/
 
 # Large Random Forest Model Binaries (>50MB/100MB, reproducible via train scripts)
