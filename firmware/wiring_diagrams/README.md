@@ -6,6 +6,18 @@
 
 ---
 
+## Authoritative Circuit Schematic & Wiring Diagrams
+
+### Complete System Wiring Schematic (Dual-Bank 8-Channel Relay Matrix)
+![Dual-Bank 8-Relay Circuit Wiring Diagram](circuit_design.png)
+*Figure 1: Authoritative circuit wiring schematic featuring ESP32 DevKit V1, 8-channel dual-bank Songle relay matrix (Grid & Solar), ZMPT101B voltage transformer, ACS712-20A current sensor with 10kΩ/15kΩ passive voltage divider, DHT22 sensor, and 4x manual low-voltage source selector switches (as featured in IEEE IoTJ submission Fig. 3a).*
+
+- **Authoritative PNG Schematic:** [`circuit_design.png`](circuit_design.png)
+- **High-Resolution Wiring Diagram:** [`circuit_image.png`](circuit_image.png)
+- **Scalable Vector Graphic:** [`circuit_image.svg`](circuit_image.svg)
+
+---
+
 ## 1. Physical Power Distribution & Common Ground Topology
 
 The physical Solar-Aware HEMS prototype implements a stepped-down DC power chain to isolate and regulate power for the ESP32 microcontroller, analog sensing frontend, and 8-channel relay actuation coils:
@@ -214,16 +226,11 @@ When laying out the circuit in a visual CAD/schematic tool (Fritzing, EasyEDA, K
 
 ---
 
-## 8. Legacy Diagram Disclosure: `esp32_hems_wiring.png`
+## 8. Diagram Provenance: Updated Production Schematic vs. Legacy Diagram
 
-> [!WARNING]
-> **ARCHIVED LEGACY DIAGRAM (`esp32_hems_wiring.png`):**  
-> The image file `esp32_hems_wiring.png` preserved in this directory illustrates the **early 4-relay single-bank prototype (Firmware v1)**. It does NOT depict:
-> 1. The 8-relay dual-bank matrix (Grid L1–L4 on GPIO 16/17/18/19, Solar L1–L3 on GPIO 21/22/23, Solar L4 on GPIO 13).
-> 2. The 4 physical low-voltage toggle selector switches on GPIO 26, 27, 32, and 33.
-> 3. The 10kΩ/15kΩ ACS712 voltage divider on GPIO 34.
-> 4. The 7.5V $\rightarrow$ PJ-102A $\rightarrow$ Buck Converter 5V power chain and common ground topology.
-> 
-> Refer strictly to `firmware/config.h` and the specifications above for the authoritative wiring schematic of the dual-bank production system.
+- **Authoritative Production Schematic ([`circuit_design.png`](circuit_design.png), [`circuit_image.png`](circuit_image.png), [`circuit_image.svg`](circuit_image.svg)):**  
+  Fully depicts the complete 8-relay dual-bank matrix (Grid L1–L4 on GPIO 16/17/18/19, Solar L1–L3 on GPIO 21/22/23, Solar L4 on GPIO 13), 4 physical low-voltage toggle selector switches on GPIO 26/27/32/33, 10kΩ/15kΩ ACS712 voltage divider on GPIO 34, ZMPT101B on GPIO 35, and 7.5V $\rightarrow$ PJ-102A $\rightarrow$ Buck Converter 5V power distribution rail (matching IEEE IoTJ submission Fig. 3a).
+- **Archived Legacy Diagram ([`esp32_hems_wiring.png`](esp32_hems_wiring.png)):**  
+  Preserved strictly for archival provenance; illustrates the early 4-relay single-bank prototype (Firmware v1). Refer to `circuit_design.png` for all production wiring, testing, and hardware reproduction.
 
 

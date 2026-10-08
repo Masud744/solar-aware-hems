@@ -55,7 +55,7 @@ The frontend connects to the FastAPI backend (`VITE_API_BASE_URL`, default `http
    - Theme Switcher: Light, Dark, or System mode (persisted to `localStorage`).
    - Location station configuration (Kaliakair, BD).
    - Baseline residential tariff rate (৳7.50 / kWh).
-   - Backend health diagnostics and model risk multiplier ($k = 1.0$).
+   - Backend health diagnostics and model risk multiplier ($k = 0.5$ balanced, $k = 1.0$ conservative).
 
 ---
 

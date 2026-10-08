@@ -10,29 +10,7 @@
 
 > **An end-to-end Cyber-Physical Home Energy Management System (HEMS) combining multi-horizon machine learning forecasting, dynamic uncertainty-quantified risk margins, TreeSHAP explainability, and dual-bank ESP32 relay hardware for robust residential solar optimization under volatile weather conditions.**
 
----
-
-## Visual Highlights & System Demonstration
-
-### 1. Master System Dashboard & Real-Time Monitoring
-![Master Dashboard Overview](Screenshoots/overview_1.png)
-*Figure 1: Main Solar-Aware HEMS Web Interface featuring real-time solar generation, household load metrics, net grid draw, weather forecast telemetry, and physical source allocation state.*
-
-### 2. Multi-Horizon Forecast Horizon & Uncertainty Envelopes
-![24-Hour Forecast Curves](Screenshoots/forcast_1.png)
-*Figure 2: 24-hour ahead predictive horizon comparing ML point forecasts with conservative risk-adjusted lower-bound solar generation and upper-bound load expectations.*
-
-### 3. Dual-Layer Explainable AI (TreeSHAP Feature Attributions)
-![TreeSHAP Feature Rankings](Screenshoots/xai_1.png)
-*Figure 3: Global and local TreeSHAP feature attribution rankings providing interpretability and physical auditability for predictive ML outputs.*
-
-### 4. Risk-Aware 24-Hour Appliance Scheduling Timeline
-![24-Hour Appliance Schedule](Screenshoots/appliance_3.png)
-*Figure 4: Automated 24-hour appliance dispatch timeline computing safe solar surplus windows to prevent unexpected utility grid deficits.*
-
-### 5. Embedded Hardware Prototype & Physical Silicon Testbed
-![ESP32 Hardware Testbed Overview](Screenshoots/prototype_view_1.jpeg)
-*Figure 5: Physical Cyber-Physical testbed featuring ESP32 FreeRTOS core, high-speed AC voltage/current sampling stage, and 8-channel dual-bank relay matrix with 300 ms break-before-make interlocks.*
+> 📸 **Visual Walkthrough & Hardware Gallery:** For the complete 25-asset visual showcase—including full-resolution dashboard UI previews, 24-hour predictive uncertainty envelopes, TreeSHAP waterfall attributions, SoftAP captive portal onboarding, and physical ESP32 testbed bench photographs—see the [Complete Visual Demonstration Gallery (§13)](#13-complete-visual-demonstration-gallery-all-25-assets).
 
 ---
 
@@ -63,7 +41,7 @@
 ## 1. Key Features
 
 - **Multi-Horizon ML Forecasting:** Out-of-sample chronological forecasting of PV generation ($R^2 = 0.9547$) and residential aggregate load ($R^2 = 0.5929$) free of future lookahead or target leakage.
-- **Dynamic $k \times \sigma$ Risk Engine:** Converts point forecasts into lower-bound solar generation and upper-bound load expectations, guaranteeing zero-deficit dispatch windows under an empirical $k=1.0$ operating point.
+- **Dynamic $k \times \sigma$ Risk Engine:** Converts point forecasts into lower-bound solar generation and upper-bound load expectations, offering configurable trade-offs from balanced surplus utilization ($k=0.5$, $98.86\%$ empirical safety) to zero-deficit guarantees ($k=1.0$, $100.0\%$ empirical safety).
 - **Dual-Layer Explainable AI (XAI):** Real-time TreeSHAP attribution delivering instant global feature rankings and local waterfall breakdowns for every prediction.
 - **Dual-Core FreeRTOS Embedded Controller:** ESP32 firmware running 1 kHz true-RMS AC voltage/current sampling on Core 1 while managing Wi-Fi, HTTP telemetry streaming, and polling on Core 0.
 - **Hardware Break-Before-Make Interlocks:** Enforces a 300 ms dead-time between Grid and Solar relay transitions to prevent catastrophic phase short-circuits.
@@ -164,7 +142,7 @@ $$\text{Conservative Load } (\hat{L}_{\text{cons}}) = \hat{L} + k \cdot \sigma_{
 
 $$\text{Safe Solar Surplus } (\text{Surplus}_{\text{safe}}) = \hat{S}_{\text{safe}} - \hat{L}_{\text{cons}}$$
 
-Where $k=1.0$ is the empirically selected operating point providing robust coverage across backtested residual distributions.
+Where $k \in [0.5, 1.5]$ provides an operator-tunable safety multiplier: $k=0.5$ serves as the balanced operating point ($98.86\%$ unhedged safety, $+29.5\%$ surplus utilization), while $k=1.0$ serves as the conservative operating point guaranteeing $100.0\%$ empirical safety across all 176 synthetic test days.
 
 #### Calibrated Uncertainty Dispersion Buckets ($\sigma$)
 - **Solar Residual Buckets:**
@@ -202,16 +180,16 @@ To prevent artificial inflation of accuracy from data leakage, all datasets were
 
 | Pipeline | Model Architecture | Test $R^2$ | Test RMSE (kW) | Test MAE (kW) | Operational Role |
 | :--- | :--- | :---: | :---: | :---: | :--- |
-| **Solar Generation** | **Random Forest (`rf_corrected.joblib`)** | **0.9547** | **0.1264** | **0.0617** | **Primary Scientific Benchmark** |
-| Solar Generation | **XGBoost (`xgboost_corrected.joblib`)** | **0.9507** | **0.1319** | **0.0673** | **Cloud Free-Tier Production Engine** |
-| Solar Generation | Decision Tree | 0.9329 | 0.1539 | 0.0766 | Fast Edge / Local Baseline |
-| Solar Generation | Support Vector Regression (SVR) | 0.9416 | 0.1436 | 0.0772 | Non-linear Comparative Model |
-| Solar Generation | Linear Regression | 0.7303 | 0.3108 | 0.2291 | Linear Benchmark |
-| **Residential Load** | **Random Forest (`rf_corrected.joblib`)** | **0.5929** | **0.4908** | **0.3150** | **Primary Scientific Benchmark** |
-| Residential Load | **XGBoost (`xgboost_corrected.joblib`)** | **0.5694** | **0.5048** | **0.3341** | **Cloud Free-Tier Production Engine** |
-| Residential Load | Decision Tree | 0.4475 | 0.5721 | 0.3693 | Fast Edge / Local Baseline |
-| Residential Load | Support Vector Regression (SVR) | 0.5401 | 0.5216 | 0.3332 | Non-linear Comparative Model |
-| Residential Load | Linear Regression | 0.5422 | 0.5204 | 0.3601 | Linear Benchmark |
+| **Solar Generation** | **Random Forest (`rf_corrected.joblib`)** | **0.9547** | **0.1244** | **0.0641** | **Primary Scientific Benchmark** |
+| Solar Generation | **XGBoost (`xgboost_corrected.joblib`)** | **0.9532** | **0.1265** | **0.0697** | **Cloud Free-Tier Production Engine** |
+| Solar Generation | CART Regressor | 0.9486 | 0.1326 | 0.0684 | Fast Edge / Local Baseline |
+| Solar Generation | Support Vector Regression (SVR) | 0.9327 | 0.1516 | 0.0922 | Non-linear Comparative Model |
+| Solar Generation | Linear Regression (OLS) | 0.5690 | 0.3837 | 0.3001 | Linear Benchmark |
+| **Residential Load** | **Random Forest (`rf_corrected.joblib`)** | **0.5929** | **0.4838** | **0.3321** | **Primary Scientific Benchmark** |
+| Residential Load | **XGBoost (`xgboost_corrected.joblib`)** | **0.5792** | **0.4919** | **0.3424** | **Cloud Free-Tier Production Engine** |
+| Residential Load | Support Vector Regression (SVR) | 0.5447 | 0.5117 | 0.3453 | Non-linear Comparative Model |
+| Residential Load | Linear Regression (OLS) | 0.5313 | 0.5191 | 0.3682 | Linear Benchmark |
+| Residential Load | CART Regressor | 0.4837 | 0.5449 | 0.3711 | Fast Edge / Local Baseline |
 
 ---
 
@@ -242,13 +220,13 @@ Solar AC Line   ──► [ Bank B: Relay 5 ] ──┘
 
 ### Safety Interlocks & Hardware Protections
 - **Break-Before-Make Switching:** Firmware strictly enforces a **300 ms dead-time** when transferring any appliance between Grid and Solar sources, preventing direct short-circuits between unsynchronized AC phases.
-- **Anti-Chattering Timer:** A minimum hold duration (60 seconds) prevents relay contacts from rapid thermal oscillation during marginal solar conditions.
+- **Anti-Chattering Hysteresis:** A minimum dwell time ($T_{\text{dwell}} \ge 180\text{ s}$) and surplus hysteresis margin ($\Delta P_{\text{hyst}} \ge 50\text{ W}$) prevents relay contacts from rapid thermal oscillation during marginal solar conditions.
 - **Active-LOW Fail-Safe Logic:** In the event of an ESP32 power outage or reset, all relay coils de-energize to the normally open (NO) fail-safe state.
 
 ### High-Frequency AC Sensing & Calibration Validation
 - **Microcontroller Core 1 Sampling:** The ESP32 executes an unthrottled synchronized sampling loop ($1.5\text{–}2.0\text{ kHz}$) across a $200\text{ ms}$ window (10 complete $50\text{ Hz}$ AC cycles), capturing $300\text{–}400$ dual-channel sample pairs for ZMPT101B voltage and ACS712-20A current.
-- **Direct Measured Evidence:** Physical bench multimeter reference measurements recorded mains voltage $V \approx 226.0\text{ V AC RMS}$ and load current $I \approx 0.28\text{ A AC RMS}$ for a connected Walton WTF9M3 table fan (manufacturer nameplate rated active power $60\text{ W}$). Calculated bench apparent power is $S = 63.28\text{ VA}$. Power factor is unmeasured.
-- **Voltage Scaling & Recorded Telemetry:** Calibrated scaling factor $K_V = 0.619060\text{ V/count}$ (derived from raw unrounded burst swing) achieved live ESP32 telemetry reading $V_{\text{ESP32}} = 228.16\text{ V}$ ($1.40\%$ post-calibration observational difference relative to the $225.00\text{ V}$ calibration reference; $0.96\%$ cross-session observational difference relative to the later $\approx 226\text{ V}$ DMM observation; neither comparison was synchronously data-logged). Measured quiescent zero offsets ($V_{\text{zero}} = 2539.65, I_{\text{zero}} = 2537.18$) are persisted in NVS flash namespace `"hems_cal"`.
+- **Direct Measured Evidence:** Physical bench multimeter reference measurements recorded mains voltage $V \approx 226.0\text{ V AC RMS}$ and load current $I \approx 0.28\text{ A AC RMS}$ for a connected Walton WTF9M3 table fan (manufacturer nameplate rated active power $60\text{ W}$, calculated bench apparent power $S = 63.28\text{ VA}$, power factor unmeasured).
+- **Voltage Scaling & Recorded Telemetry:** Calibrated scaling factor $K_V = 0.619060\text{ V/count}$ achieved live ESP32 Core 1 discrete RMS telemetry reading $V_{\text{ESP32}} = 228.16\text{ V}$ ($0.96\%$ observational difference relative to the external $\approx 226\text{ V}$ DMM benchmark). Measured quiescent zero offsets ($V_{\text{zero}} = 2539.65, I_{\text{zero}} = 2537.18$) are persisted in NVS flash namespace `"hems_cal"`. The exploratory 4.37-hour benchrun confirmed continuous sensor streaming ($0.3329\text{ kWh}$ trapezoidal accumulation representing raw uncalibrated sensor noise floor throughput, not revenue-grade active power).
 - **Quantization Disclosure:** The ACS712-20A sensor with a $10\text{k}\Omega / 15\text{k}\Omega$ passive divider provides a 12-bit ADC quantization step of $13.43\text{ mA/count}$. Sub-ampere appliances ($0.28\text{ A}$) operate with an ADC swing of $\approx \pm 29.5\text{ counts}$, confirming that low-power residential appliances operate in the low-quantization region of a 20A Hall sensor.
 
 ### SmartProv Captive-Portal Wi-Fi Provisioning
@@ -288,7 +266,7 @@ Edit `backend/.env` with your Supabase credentials:
 ```env
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-secret-key
-SAFETY_K=1.0
+SAFETY_K=0.5  # Balanced operating point (0.5 balanced, 1.0 conservative zero-deficit)
 GROQ_API_KEY=your-groq-api-key
 GROQ_MODEL=llama-3.3-70b-versatile
 ```
@@ -324,7 +302,7 @@ VITE_API_BASE_URL=http://127.0.0.1:8000
 The entire codebase is validated with an automated test suite spanning backend prediction services, risk calculation math, Supabase RBAC access controls, firmware telemetry parsing, and state synchronization:
 
 ```bash
-# Run complete test suite (46 Tests)
+# Run complete test suite (68 Tests)
 SOLAR_MODEL_PATH=ml/solar/models/xgboost_corrected.joblib \
 LOAD_MODEL_PATH=ml/load/models/xgboost_corrected.joblib \
 pytest -v backend/tests firmware/tests
@@ -335,19 +313,22 @@ pytest -v backend/tests firmware/tests
 ============================= test session starts ==============================
 platform linux -- Python 3.14.4, pytest-9.0.2
 rootdir: /path/to/solar-aware-hems
-collected 46 items
+collected 68 items
 
 backend/tests/test_assistant_chat.py::test_tool_get_live_telemetry PASSED
-backend/tests/test_assistant_chat.py::test_tool_appliance_safety_allow PASSED
+backend/tests/test_assistant_chat.py::test_chat_hardware_safety_no_relays_in_tools PASSED
 backend/tests/test_auth_and_admin.py::test_signup_creates_pending_user PASSED
 backend/tests/test_auth_and_admin.py::test_login_approved_user_receives_token PASSED
 backend/tests/test_decision_engine.py::TestSection83WorkedExample::test_exact_intermediate_values PASSED
+backend/tests/test_decision_engine.py::TestSigmaBuckets::test_solar_clear_boundary PASSED
+backend/tests/test_decision_engine.py::TestStaleAwareAdmissionPolicy::test_stale_forecast_with_positive_safe_surplus_returns_deny PASSED
 backend/tests/test_energy_accounting.py::test_trapezoidal_integration_basic PASSED
 backend/tests/test_firmware_v2_endpoints.py::test_calibrated_telemetry_ingest PASSED
 backend/tests/test_state_synchronization.py::test_pending_command_protected_from_old_telemetry PASSED
+backend/tests/test_weather_cache_and_resilience.py::TestWeatherCacheAndResilience::test_admission_1_stale_forecast_positive_surplus_denied PASSED
 firmware/tests/test_firmware_math.py::test_pure_resistive_load PASSED
 firmware/tests/test_firmware_math.py::test_acs712_resistor_divider_voltage_safety PASSED
-======================== 46 passed, 1 warning in 0.78s =========================
+======================== 68 passed, 1 warning in 1.42s =========================
 ```
 
 ---
@@ -407,7 +388,7 @@ solar-aware-hems/
   - `LOAD_MODEL_PATH`: `ml/load/models/xgboost_corrected.joblib`
   - `SUPABASE_URL`: `https://<your-project>.supabase.co`
   - `SUPABASE_SERVICE_ROLE_KEY`: `<your-supabase-service-role-key>`
-  - `SAFETY_K`: `1.0`
+  - `SAFETY_K`: `0.5` (or `1.0` for conservative zero-deficit)
   - `GROQ_API_KEY`: `<your-groq-api-key>`
   - `GROQ_MODEL`: `llama-3.3-70b-versatile`
 - **Operational RAM:** Measured **$250.43\text{ MB}$ RAM** during active inference, operating safely within the $512\text{ MB}$ limit.
@@ -495,8 +476,8 @@ solar-aware-hems/
 ### 13.10 Embedded Hardware Prototype & Physical Silicon Testbed
 | Testbed Overview | AC Sensing Stage | Relay Matrix Bank | ESP32 Controller Core |
 | :---: | :---: | :---: | :---: |
-| ![Prototype Overview](Screenshoots/prototype_view_1.jpeg) | ![AC Sensing](Screenshoots/prototype_view_2.jpeg) | ![Relay Bank](Screenshoots/prototype_view_3.jpeg) | ![ESP32 Core](Screenshoots/prototype_view_4.jpeg) |
-| *Complete physical bench setup* | *ZMPT101B & ACS712 sensors* | *8-channel dual-bank matrix* | *ESP32 FreeRTOS microcontroller* |
+| ![Prototype Overview](Screenshoots/updated_prototype.jpeg) | ![AC Sensing](Screenshoots/prototype_view_2.jpeg) | ![Relay Bank](Screenshoots/prototype_view_3.jpeg) | ![ESP32 Core](Screenshoots/prototype_view_4.jpeg) |
+| *Commissioned physical prototype (IEEE IoTJ submission)* | *ZMPT101B & ACS712 sensors* | *8-channel dual-bank matrix* | *ESP32 FreeRTOS microcontroller* |
 
 ---
 

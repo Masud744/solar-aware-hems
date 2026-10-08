@@ -230,9 +230,9 @@ Safe Surplus      = Safe Solar - Conservative Load
 | Afternoon | 12–17 | 0.5114 |
 | Evening | 18–23 | 0.6075 |
 
-### k = 1.0 (Production Default)
+### k Parameter Formulation ($k = 0.5$ Balanced, $k = 1.0$ Conservative Default)
 
-Selected operating point based on the observed empirical coverage-utilization trade-off (Phase 4). Not described as mathematically optimal or having a textbook confidence interpretation.
+Operator-configurable risk multiplier based on the observed empirical coverage-utilization trade-off (Phase 4). $k=0.5$ serves as the balanced operating point ($98.86\%$ unhedged safety, $+29.5\%$ surplus utilization), while $k=1.0$ provides a conservative zero-deficit operating point ($100.0\%$ empirical safety across all 176 synthetic test days). Not described as mathematically optimal or having a textbook confidence interpretation.
 
 ### `GET /energy/summary`
 
@@ -391,6 +391,8 @@ If Open-Meteo is unreachable → HTTP 503 error. No fabricated values.
 cd backend
 python -m pytest tests/ -v
 ```
+
+Validates 64 backend unit and integration tests spanning ML prediction, risk-aware decision gating, stale forecast resilience, Supabase RBAC access controls, energy accounting, and assistant chat tools (part of the complete 68-test suite across the repository).
 
 ### §8.3 Worked Example Test
 Reproduces the exact documented numbers: Safe Solar = 1.575 kW, Conservative Load = 0.80 kW, Safe Surplus = 0.775 kW → DENY.

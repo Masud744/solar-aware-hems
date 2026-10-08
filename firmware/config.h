@@ -36,6 +36,11 @@
 #define SP_RESET_PIN          0       // GPIO 0 (BOOT button) for factory reset
 #define SP_AP_PREFIX          "HEMS"  // AP name prefix: "HEMS_XXXX"
 
+// Optional one-time force reset flag: Set to true if you want to force-wipe
+// stored Wi-Fi credentials immediately on boot without pressing any button.
+// Default: false.
+#define FORCE_WIFI_RESET_ON_BOOT  false
+
 #define BACKEND_HOST "https://solar-aware-hems.onrender.com"
 #define INGEST_ENDPOINT BACKEND_HOST "/ingest"
 #define ACTION_POLL_ENDPOINT BACKEND_HOST "/api/device/status"

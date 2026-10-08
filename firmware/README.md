@@ -47,8 +47,8 @@ To prevent network operations (HTTP polling, telemetry uploads, DNS lookups, or 
 2. **Core 0 — Network & Telemetry Task (`networkTask`):**
    - Pinned to Core 0 with priority 1 (stack size: 8192 bytes).
    - Manages Wi-Fi connection with a 10-second non-blocking retry rate limiter.
-   - Periodically polls the backend for remote dispatch commands (`/status`, interval: 3000 ms, timeout: 1000 ms).
-   - Periodically streams live system telemetry to `/ingest` (interval: 5000 ms, timeout: 1000 ms).
+   - Periodically polls the backend for remote dispatch commands (`/api/device/status`, interval: 1500 ms, timeout: 1000 ms).
+   - Periodically streams live system telemetry to `/ingest` (interval: 3000 ms, timeout: 1000 ms).
    - Reconnect state synchronization: pushes live ESP32 state upon reconnecting.
 
 ### Inter-Task Communication & Thread Safety:
@@ -118,6 +118,10 @@ For each load $i \in \{1, 2, 3, 4\}$, the firmware maintains:
 ---
 
 ## 5. Hardware Architecture, Power Distribution & Pinout Allocation (ESP32 30-Pin DevKit V1)
+
+### Authoritative Circuit Schematic Diagram
+![Dual-Bank ESP32 HEMS Circuit Schematic](wiring_diagrams/circuit_design.png)
+*Figure: Authoritative circuit wiring schematic for the dual-bank 8-relay matrix, AC sensing stage, and manual source selectors (as published in IEEE IoTJ submission Fig. 3a). Vector source: [`wiring_diagrams/circuit_image.svg`](wiring_diagrams/circuit_image.svg).*
 
 ### A. Physical Prototype Power Distribution & Ground Architecture:
 ```
@@ -208,6 +212,7 @@ Follow these 4 steps in order on the dashboard (`Live Operations -> Remote Senso
 | **Solar Relays L1–L3 (GPIO 21, 22, 23)** | Implemented (`relay_controller.cpp`) | **VERIFIED** (Physical switching confirmed) |
 | **Solar Relay L4 (GPIO 13)** | Implemented (`relay_controller.cpp`) | **VERIFIED** (Physical switching confirmed on GPIO 13) |
 | **300 ms Break-Before-Make Dead-Time** | Implemented (`relay_controller.cpp`) | **VERIFIED** (Software delay enforced between relay states) |
+| **Anti-Chattering Hysteresis** | Implemented (`decision_engine` / cloud) | **VERIFIED** ($T_{\text{dwell}} \ge 180\text{ s}, \Delta P_{\text{hyst}} \ge 50\text{ W}$ holdoff) |
 | **Source Selectors L1–L4 (GPIO 26, 27, 32, 33)** | Implemented (`control_switches.cpp`) | **VERIFIED** (40 ms debounce, boot settling, immediate override) |
 | **DHT22 Temperature & Humidity (GPIO 4)** | Implemented (`firmware.ino`) | **VERIFIED** (Live readings: $32.5^{\circ}\text{C}$, $83.4\%$ humidity) |
 | **Wi-Fi HTTPS Cloudflare Tunnel & Dual-Core Ingest** | Implemented (`firmware.ino`) | **VERIFIED** (Reliable remote telemetry & status dispatch) |

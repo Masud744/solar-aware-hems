@@ -451,6 +451,30 @@ void printSystemStatus() {
     Serial.println(F("==================================================================\n"));
 }
 
+// ---------------------------------------------------------------------------
+// Wi-Fi Factory Reset (Wipes SmartProv NVS and ESP32 WiFi driver cache)
+// ---------------------------------------------------------------------------
+void performWiFiFactoryReset() {
+    Serial.println(F("\n=============================================================="));
+    Serial.println(F("  [RESET] Initiating Wi-Fi Factory Reset..."));
+    Serial.println(F("  [RESET] Erasing 'smartprov' NVS credentials..."));
+
+    Preferences spPrefs;
+    spPrefs.begin("smartprov", false);
+    spPrefs.clear();
+    spPrefs.end();
+
+    Serial.println(F("  [RESET] Erasing cached net80211 STA credentials..."));
+    WiFi.disconnect(true, true);
+    delay(200);
+
+    Serial.println(F("  [RESET] Wi-Fi memory completely wiped."));
+    Serial.println(F("  [RESET] Restarting ESP32 into SmartProv Captive Portal..."));
+    Serial.println(F("==============================================================\n"));
+    delay(500);
+    ESP.restart();
+}
+
 void handleSerialCLI() {
     if (!Serial.available()) return;
 
@@ -505,6 +529,9 @@ void handleSerialCLI() {
         strncpy(current_cal_status, "UNCALIBRATED", sizeof(current_cal_status));
         Serial.println(F("[CAL] Calibration cleared from NVS flash. Reset to defaults."));
     }
+    else if (cmd.equalsIgnoreCase("RESET_WIFI") || cmd.equalsIgnoreCase("FACTORY_RESET") || cmd.equalsIgnoreCase("CLEAR_WIFI")) {
+        performWiFiFactoryReset();
+    }
     else if (cmd.startsWith("RELAY ")) {
         int firstSpace = cmd.indexOf(' ');
         int secondSpace = cmd.indexOf(' ', firstSpace + 1);
@@ -538,6 +565,7 @@ void handleSerialCLI() {
         Serial.println(F("  SET_VCAL <factor>       : Set voltage scaling factor (persists to NVS)"));
         Serial.println(F("  SET_SENS <volts/amp>    : Set ACS712 sensitivity (persists to NVS)"));
         Serial.println(F("  RESET_CAL               : Reset calibration constants in NVS to defaults"));
+        Serial.println(F("  RESET_WIFI              : Wipe stored Wi-Fi credentials and restart in AP mode"));
         Serial.println(F("  HELP                    : Show this menu"));
         Serial.println(F("===========================================\n"));
     }
@@ -552,6 +580,33 @@ void setup() {
 
     pinMode(PIN_STATUS_LED, OUTPUT);
     digitalWrite(PIN_STATUS_LED, LOW);
+    pinMode(SP_RESET_PIN, INPUT_PULLUP);
+
+    #if defined(FORCE_WIFI_RESET_ON_BOOT) && FORCE_WIFI_RESET_ON_BOOT
+    Serial.println(F("[BOOT] FORCE_WIFI_RESET_ON_BOOT is enabled -> Wiping Wi-Fi credentials..."));
+    performWiFiFactoryReset();
+    #endif
+
+    // One-time automatic migration wipe to clear any previously corrupted/stale Wi-Fi credentials
+    {
+        Preferences sysPrefs;
+        sysPrefs.begin("hems_sys", false);
+        uint32_t wipeTag = sysPrefs.getUInt("wifi_clean_tag", 0);
+        if (wipeTag != 20260915) {
+            sysPrefs.putUInt("wifi_clean_tag", 20260915);
+            sysPrefs.end();
+            Serial.println(F("\n[BOOT] One-time automatic Wi-Fi clean tag detected -> Clearing stale/corrupted Wi-Fi..."));
+            performWiFiFactoryReset();
+        }
+        sysPrefs.end();
+    }
+
+    // Check if BOOT button (GPIO 0) is held during startup
+    if (digitalRead(SP_RESET_PIN) == LOW) {
+        Serial.println(F("[BOOT] BOOT button (GPIO 0) held at startup -> Wiping Wi-Fi credentials..."));
+        delay(400);
+        performWiFiFactoryReset();
+    }
 
     // =========================================================================
     // PHASE 0: SmartProv Wi-Fi Provisioning Boot-Gate
@@ -587,12 +642,22 @@ void setup() {
         strncpy(provisioned_ssid, ssid.c_str(), sizeof(provisioned_ssid) - 1);
 
         // SmartProv stores credentials in NVS "smartprov". Retrieve the
-        // password from the storage layer for reconnection use.
+        // matching password for the connected SSID for reconnection use.
         {
             SP_Storage& storage = prov->getStorage();
             SPConfig cfg = storage.load();
-            SPWiFiEntry firstNet = storage.getFirstNetwork(cfg);
-            strncpy(provisioned_password, firstNet.password, sizeof(provisioned_password) - 1);
+            bool matched = false;
+            for (int i = 0; i < SP_MAX_NETWORKS; i++) {
+                if (cfg.networks[i].valid && strcmp(cfg.networks[i].ssid, ssid.c_str()) == 0) {
+                    strncpy(provisioned_password, cfg.networks[i].password, sizeof(provisioned_password) - 1);
+                    matched = true;
+                    break;
+                }
+            }
+            if (!matched) {
+                SPWiFiEntry firstNet = storage.getFirstNetwork(cfg);
+                strncpy(provisioned_password, firstNet.password, sizeof(provisioned_password) - 1);
+            }
         }
 
         Serial.printf("[BOOT] SmartProv connected — SSID: %s | IP: %s\n",
@@ -668,6 +733,22 @@ void setup() {
 void loop() {
     // 0. Handle Serial CLI commands
     handleSerialCLI();
+
+    // 0b. Runtime BOOT button check (GPIO 0, active-LOW): Hold for 3 seconds to factory reset Wi-Fi
+    static unsigned long bootBtnPressStart = 0;
+    static bool bootBtnPressed = false;
+    if (digitalRead(SP_RESET_PIN) == LOW) {
+        if (!bootBtnPressed) {
+            bootBtnPressed = true;
+            bootBtnPressStart = millis();
+            Serial.println(F("[BUTTON] BOOT button pressed. Hold for 3s to factory reset Wi-Fi..."));
+        } else if (millis() - bootBtnPressStart >= 3000) {
+            Serial.println(F("[BUTTON] BOOT button held for 3s -> Triggering Wi-Fi Factory Reset!"));
+            performWiFiFactoryReset();
+        }
+    } else {
+        bootBtnPressed = false;
+    }
 
     // 1. Poll physical source-selector switches (40 ms debounce)
     controlSwitches.pollAndDebounce();
